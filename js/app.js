@@ -1,22 +1,18 @@
 // ===================================
 // SCHOOL CARPOOL WEB APPLICATION
-// Main JavaScript File - Complete Integrated Version
+// Full Final Version - All Features Fixed
 // ===================================
 
-// 1. Configuration
 const SUPABASE_URL = 'https://zjxkykvkxfrndlcirfjg.supabase.co'; 
 const SUPABASE_ANON_KEY = 'sb_publishable_MsYFfGjoGA-rl8PCjF-58Q_kGkMvzuF'; 
 
-// 2. Initialize client with a unique name to avoid declaration conflicts
 const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Global state
 let currentUser = null;
 let currentUserProfile = null;
-let allTrips = [];
 
 // ===================================
-// UTILITY FUNCTIONS
+// UTILITY & NAVIGATION
 // ===================================
 
 function showToast(message, duration = 3000) {
@@ -30,47 +26,20 @@ function showToast(message, duration = 3000) {
 
 function showPage(pageId) {
     const pages = ['loginPage', 'profileSetupPage', 'dashboardPage', 'myTripsPage'];
-    pages.forEach(page => {
-        const el = document.getElementById(page);
-        if (el) el.classList.add('hidden');
-    });
-    const targetPage = document.getElementById(pageId);
-    if (targetPage) targetPage.classList.remove('hidden');
+    pages.forEach(p => document.getElementById(p)?.classList.add('hidden'));
+    document.getElementById(pageId)?.classList.remove('hidden');
     
     const navbar = document.getElementById('navbar');
-    if (pageId === 'loginPage' || pageId === 'profileSetupPage') {
-        navbar?.classList.add('hidden');
-    } else {
-        navbar?.classList.remove('hidden');
-    }
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-MY', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function formatTime(timeString) {
-    if (!timeString) return "";
-    const [hours, minutes] = timeString.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${minutes} ${ampm}`;
+    (pageId === 'loginPage' || pageId === 'profileSetupPage') ? navbar?.classList.add('hidden') : navbar?.classList.remove('hidden');
 }
 
 // ===================================
-// AUTHENTICATION FUNCTIONS
+// AUTH & PROFILE DATA LOGIC
 // ===================================
 
 async function initializeAuth() {
-    const loadingScreen = document.getElementById('loadingScreen');
-    if (loadingScreen) loadingScreen.classList.remove('hidden');
-    
     try {
-        const { data: { session }, error } = await sbClient.auth.getSession();
-        if (error) throw error;
-
+        const { data: { session } } = await sbClient.auth.getSession();
         if (session) {
             currentUser = session.user;
             await checkUserProfile();
@@ -78,10 +47,9 @@ async function initializeAuth() {
             showPage('loginPage');
         }
     } catch (err) {
-        console.error('Auth Error:', err);
         showPage('loginPage');
     } finally {
-        if (loadingScreen) loadingScreen.classList.add('hidden');
+        document.getElementById('loadingScreen')?.classList.add('hidden');
     }
 }
 
@@ -97,75 +65,30 @@ async function checkUserProfile() {
         prefillProfileForm();
     } else {
         currentUserProfile = data;
-        initializeDashboard();
+        updateUIWithProfile();
         showPage('dashboardPage');
+        renderDashboard();
     }
 }
 
 function prefillProfileForm() {
-    if (currentUser?.user_metadata) {
-        const nameInput = document.getElementById('nameInput');
-        if (nameInput && currentUser.user_metadata.full_name) {
-            nameInput.value = currentUser.user_metadata.full_name;
-        }
-        const avatar = document.getElementById('userAvatar');
-        if (avatar && currentUser.user_metadata.avatar_url) {
-            avatar.src = currentUser.user_metadata.avatar_url;
-        }
+    // Fill from Google Metadata if available
+    const nameInput = document.getElementById('nameInput');
+    if (nameInput && currentUser.user_metadata?.full_name) {
+        nameInput.value = currentUser.user_metadata.full_name;
+    }
+    
+    // Fill with existing profile data if we are editing
+    if (currentUserProfile) {
+        if (document.getElementById('nameInput')) document.getElementById('nameInput').value = currentUserProfile.name || '';
+        if (document.getElementById('phoneInput')) document.getElementById('phoneInput').value = currentUserProfile.phone || '';
+        if (document.getElementById('genderInput')) document.getElementById('genderInput').value = currentUserProfile.gender || '';
+        if (document.getElementById('areaInput')) document.getElementById('areaInput').value = currentUserProfile.area || '';
+        if (document.getElementById('roleInput')) document.getElementById('roleInput').value = currentUserProfile.role || '';
     }
 }
 
-async function signInWithGoogle() {
-    const redirectUrl = window.location.origin + window.location.pathname;
-    const { error } = await sbClient.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: redirectUrl }
-    });
-    if (error) showToast('Sign in failed: ' + error.message);
-}
-
-async function signOut() {
-    const { error } = await sbClient.auth.signOut();
-    if (!error) {
-        currentUser = null;
-        currentUserProfile = null;
-        showPage('loginPage');
-        showToast('Signed out successfully');
-    }
-}
-
-// ===================================
-// TRIP DISCOVERY & DASHBOARD
-// ===================================
-
-async function loadTrips(filters = {}) {
-    try {
-        let query = sbClient
-            .from('trips')
-            .select(`
-                *,
-                driver:users!trips_driver_id_fkey(name, phone, profile_image_url, car_model, car_plate),
-                trip_members(user_id, status)
-            `)
-            .eq('is_active', true)
-            .gte('trip_date', new Date().toISOString().split('T')[0])
-            .order('trip_date', { ascending: true });
-        
-        const { data, error } = await query;
-        if (error) throw error;
-        
-        // Filter: Hide user's own trips from the discovery dashboard
-        let filteredTrips = (data || []).filter(trip => trip.driver_id !== currentUser.id);
-        
-        allTrips = filteredTrips;
-        return filteredTrips;
-    } catch (err) {
-        console.error('Load Trips Error:', err);
-        return [];
-    }
-}
-
-async function initializeDashboard() {
+function updateUIWithProfile() {
     const avatar = document.getElementById('userAvatar');
     if (avatar && currentUserProfile) {
         avatar.src = currentUserProfile.profile_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile.name)}`;
@@ -176,136 +99,123 @@ async function initializeDashboard() {
         const isDriver = ['Driver', 'Both'].includes(currentUserProfile?.role);
         isDriver ? createBtn.classList.remove('hidden') : createBtn.classList.add('hidden');
     }
-    await renderDashboard();
 }
+
+// ===================================
+// TRIP OPERATIONS
+// ===================================
 
 async function renderDashboard() {
-    const trips = await loadTrips();
+    const { data, error } = await sbClient
+        .from('trips')
+        .select(`*, driver:users!trips_driver_id_fkey(name, profile_image_url), trip_members(user_id)`)
+        .eq('is_active', true)
+        .order('trip_date', { ascending: true });
+
     const container = document.getElementById('tripsContainer');
-    const emptyState = document.getElementById('emptyState');
-    
     if (!container) return;
 
-    if (trips.length === 0) {
+    if (error || !data || data.length === 0) {
         container.innerHTML = '';
-        emptyState?.classList.remove('hidden');
+        document.getElementById('emptyState')?.classList.remove('hidden');
     } else {
-        emptyState?.classList.add('hidden');
-        container.innerHTML = trips.map(trip => renderTripCard(trip)).join('');
+        document.getElementById('emptyState')?.classList.add('hidden');
+        // Filter out own trips
+        const discoveryTrips = data.filter(t => t.driver_id !== currentUser.id);
+        
+        container.innerHTML = discoveryTrips.map(trip => {
+            const isJoined = trip.trip_members?.some(m => m.user_id === currentUser.id);
+            const seatsLeft = trip.max_passengers - (trip.current_passengers || 0);
+            
+            return `
+            <div class="bg-white p-6 rounded-xl shadow-md border trip-card">
+                <h3 class="font-bold text-lg">${trip.title}</h3>
+                <p class="text-sm text-gray-600 mb-4">${trip.start_point} to ${trip.destination}</p>
+                <div class="flex justify-between items-center text-xs text-blue-600 mb-4">
+                    <span><i class="fas fa-calendar"></i> ${trip.trip_date}</span>
+                    <span><i class="fas fa-users"></i> ${seatsLeft} seats left</span>
+                </div>
+                ${isJoined ? 
+                    `<button onclick="handleLeaveTrip('${trip.id}')" class="w-full bg-red-500 text-white py-2 rounded-lg">Leave Trip</button>` :
+                    seatsLeft <= 0 ? `<button disabled class="w-full bg-gray-300 text-gray-500 py-2 rounded-lg">Full</button>` :
+                    `<button onclick="handleJoinTrip('${trip.id}')" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">Join Trip</button>`
+                }
+            </div>`;
+        }).join('');
     }
 }
-
-function renderTripCard(trip) {
-    const isUserJoined = trip.trip_members?.some(m => m.user_id === currentUser.id);
-    const availableSeats = trip.max_passengers - (trip.current_passengers || 0);
-    const isFull = availableSeats <= 0;
-    
-    return `
-        <div class="trip-card bg-white rounded-xl shadow-md p-6 border">
-            <h3 class="text-lg font-bold text-gray-800 mb-2">${trip.title}</h3>
-            <div class="text-sm text-gray-600 space-y-1 mb-4">
-                <p><i class="fas fa-map-marker-alt text-blue-500 mr-2"></i>From: ${trip.start_point}</p>
-                <p><i class="fas fa-flag-checkered text-green-500 mr-2"></i>To: ${trip.destination}</p>
-                <p><i class="fas fa-calendar mr-2"></i>${formatDate(trip.trip_date)} @ ${formatTime(trip.trip_time)}</p>
-            </div>
-            <div class="flex gap-2 mb-4">
-                <span class="badge badge-blue">${trip.gender_filter}</span>
-                <span class="badge badge-green">${availableSeats} seats left</span>
-            </div>
-            ${isUserJoined ? 
-                `<button onclick="handleLeaveTrip('${trip.id}')" class="w-full bg-red-500 text-white py-2 rounded-lg">Leave Trip</button>` :
-                isFull ? `<button disabled class="w-full bg-gray-300 text-gray-500 py-2 rounded-lg cursor-not-allowed">Full</button>` :
-                `<button onclick="handleJoinTrip('${trip.id}')" class="w-full btn-primary text-white py-2 rounded-lg">Join Trip</button>`
-            }
-        </div>
-    `;
-}
-
-// ===================================
-// MY TRIPS LOGIC (DRIVER & PASSENGER)
-// ===================================
 
 async function renderMyTrips() {
-    // 1. Fetch trips where I am the Driver
-    const { data: dTrips } = await sbClient
-        .from('trips')
-        .select(`*, trip_members(user_id, status, user:users(name))`)
-        .eq('driver_id', currentUser.id);
-
-    const driverContainer = document.getElementById('driverTripsContainer');
-    if (driverContainer) {
-        driverContainer.innerHTML = dTrips?.length ? dTrips.map(t => `
-            <div class="bg-white p-4 rounded-lg shadow border">
-                <div class="flex justify-between">
-                    <strong>${t.title}</strong>
-                    <button onclick="handleDeleteTrip('${t.id}')" class="text-red-500"><i class="fas fa-trash"></i></button>
+    // Driver View
+    const { data: dTrips } = await sbClient.from('trips').select('*').eq('driver_id', currentUser.id);
+    const dContainer = document.getElementById('driverTripsContainer');
+    if (dContainer) {
+        dContainer.innerHTML = dTrips?.length ? dTrips.map(t => `
+            <div class="bg-white p-4 rounded-lg shadow border flex justify-between items-center">
+                <div>
+                    <h4 class="font-bold">${t.title}</h4>
+                    <p class="text-xs text-gray-500">${t.trip_date} | ${t.current_passengers}/${t.max_passengers} joined</p>
                 </div>
-                <p class="text-sm text-gray-500">${t.trip_date} | ${t.current_passengers}/${t.max_passengers} Seats</p>
+                <button onclick="handleDeleteTrip('${t.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded"><i class="fas fa-trash"></i></button>
             </div>
-        `).join('') : '<div class="col-span-full text-center py-8 text-gray-500">No trips created as driver.</div>';
+        `).join('') : '<p class="col-span-full text-center text-gray-400 py-10">No trips created as driver.</p>';
     }
 
-    // 2. Fetch trips where I am a Passenger
-    const { data: pTrips } = await sbClient
-        .from('trip_members')
-        .select(`*, trip:trips(*, driver:users(name))`)
-        .eq('user_id', currentUser.id);
-
-    const passengerContainer = document.getElementById('passengerTripsContainer');
-    if (passengerContainer) {
-        passengerContainer.innerHTML = pTrips?.length ? pTrips.map(m => `
-            <div class="bg-white p-4 rounded-lg shadow border">
-                <strong>${m.trip.title}</strong>
-                <p class="text-sm text-gray-500">Driver: ${m.trip.driver.name}</p>
-                <button onclick="handleLeaveTrip('${m.trip.id}')" class="mt-2 text-red-500 text-sm">Leave Trip</button>
+    // Passenger View
+    const { data: pTrips } = await sbClient.from('trip_members').select('trip:trips(*)').eq('user_id', currentUser.id);
+    const pContainer = document.getElementById('passengerTripsContainer');
+    if (pContainer) {
+        pContainer.innerHTML = pTrips?.length ? pTrips.map(m => `
+            <div class="bg-white p-4 rounded-lg shadow border flex justify-between items-center">
+                <div>
+                    <h4 class="font-bold">${m.trip.title}</h4>
+                    <p class="text-xs text-gray-500">Date: ${m.trip.trip_date}</p>
+                </div>
+                <button onclick="handleLeaveTrip('${m.trip.id}')" class="text-red-500 text-sm font-semibold">Leave</button>
             </div>
-        `).join('') : '<div class="col-span-full text-center py-8 text-gray-500">No trips joined as passenger.</div>';
+        `).join('') : '<p class="col-span-full text-center text-gray-400 py-10">No trips joined yet.</p>';
     }
 }
 
 // ===================================
-// INITIALIZATION & EVENT LISTENERS
+// EVENT LISTENERS
 // ===================================
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeAuth();
 
-    // Auth Change Listener
-    sbClient.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-            currentUser = session.user;
-            if (window.location.hash) window.history.replaceState(null, null, window.location.pathname);
-            checkUserProfile();
-        } else if (event === 'SIGNED_OUT') {
-            showPage('loginPage');
-        }
-    });
-
-    // Login & Profile UI
-    document.getElementById('googleSignInBtn')?.addEventListener('click', signInWithGoogle);
-    document.getElementById('logoutBtn')?.addEventListener('click', signOut);
+    // Dropdown and Profile Actions
     document.getElementById('userMenuBtn')?.addEventListener('click', (e) => {
         e.stopPropagation();
         document.getElementById('userDropdown')?.classList.toggle('hidden');
     });
+
     window.addEventListener('click', () => document.getElementById('userDropdown')?.classList.add('hidden'));
 
-    // Navigation Links
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        await sbClient.auth.signOut();
+        window.location.reload();
+    });
+
+    document.getElementById('viewProfile')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showPage('profileSetupPage');
+        prefillProfileForm();
+    });
+
+    // Navigation
     document.getElementById('myTripsLink')?.addEventListener('click', (e) => {
         e.preventDefault();
         showPage('myTripsPage');
         renderMyTrips();
     });
+
     document.getElementById('backToDashboard')?.addEventListener('click', () => {
         showPage('dashboardPage');
         renderDashboard();
     });
-    document.getElementById('viewProfile')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        showPage('profileSetupPage');
-    });
 
-    // Profile Form
+    // Profile Form Save
     document.getElementById('profileForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const profileData = {
@@ -316,22 +226,28 @@ document.addEventListener('DOMContentLoaded', () => {
             gender: document.getElementById('genderInput').value,
             area: document.getElementById('areaInput').value,
             role: document.getElementById('roleInput').value,
-            profile_image_url: currentUser.user_metadata?.avatar_url
+            profile_image_url: currentUser.user_metadata?.avatar_url || ''
         };
+
         const { error } = await sbClient.from('users').upsert([profileData]);
         if (!error) {
-            showToast('Profile Saved!');
-            checkUserProfile();
+            showToast('Profile Saved Successfully!');
+            await checkUserProfile();
+        } else {
+            showToast('Error saving profile');
+            console.error(error);
         }
     });
 
-    // Create Trip Logic
+    // Trip Modal & Form
     document.getElementById('createTripBtn')?.addEventListener('click', () => {
         document.getElementById('createTripModal')?.classList.remove('hidden');
     });
+
     document.getElementById('closeTripModal')?.addEventListener('click', () => {
         document.getElementById('createTripModal')?.classList.add('hidden');
     });
+
     document.getElementById('createTripForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const tripData = {
@@ -347,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             current_passengers: 0,
             is_active: true
         };
+
         const { error } = await sbClient.from('trips').insert([tripData]);
         if (!error) {
             showToast('Trip Created!');
@@ -356,23 +273,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Tab Switching
+    // Tabs
     document.getElementById('tabAsDriver')?.addEventListener('click', () => {
-        document.getElementById('tabAsDriver').className = 'border-b-2 border-blue-500 py-4 px-1 text-blue-600 font-semibold';
-        document.getElementById('tabAsPassenger').className = 'border-b-2 border-transparent py-4 px-1 text-gray-500';
+        document.getElementById('tabAsDriver').classList.add('border-blue-500', 'text-blue-600');
+        document.getElementById('tabAsPassenger').classList.remove('border-blue-500', 'text-blue-600');
         document.getElementById('driverTripsContainer').classList.remove('hidden');
         document.getElementById('passengerTripsContainer').classList.add('hidden');
     });
+
     document.getElementById('tabAsPassenger')?.addEventListener('click', () => {
-        document.getElementById('tabAsPassenger').className = 'border-b-2 border-blue-500 py-4 px-1 text-blue-600 font-semibold';
-        document.getElementById('tabAsDriver').className = 'border-b-2 border-transparent py-4 px-1 text-gray-500';
+        document.getElementById('tabAsPassenger').classList.add('border-blue-500', 'text-blue-600');
+        document.getElementById('tabAsDriver').classList.remove('border-blue-500', 'text-blue-600');
         document.getElementById('passengerTripsContainer').classList.remove('hidden');
         document.getElementById('driverTripsContainer').classList.add('hidden');
     });
 });
 
 // ===================================
-// GLOBAL BUTTON HANDLERS
+// GLOBAL CLICK HANDLERS
 // ===================================
 
 window.handleJoinTrip = async (tripId) => {
@@ -380,7 +298,7 @@ window.handleJoinTrip = async (tripId) => {
     if (trip.current_passengers >= trip.max_passengers) return showToast('Trip is full!');
 
     const { error } = await sbClient.from('trip_members').insert([{ trip_id: tripId, user_id: currentUser.id, status: 'confirmed' }]);
-    if (error) return showToast('Already joined or error occurred.');
+    if (error) return showToast('Error joining');
 
     await sbClient.from('trips').update({ current_passengers: (trip.current_passengers || 0) + 1 }).eq('id', tripId);
     showToast('Joined Trip!');
@@ -400,10 +318,10 @@ window.handleLeaveTrip = async (tripId) => {
 };
 
 window.handleDeleteTrip = async (tripId) => {
-    if (!confirm('Delete this trip? All passengers will be removed.')) return;
+    if (!confirm('Delete this trip?')) return;
     const { error } = await sbClient.from('trips').delete().eq('id', tripId);
     if (!error) {
-        showToast('Trip Deleted');
+        showToast('Trip deleted');
         renderMyTrips();
         renderDashboard();
     }
