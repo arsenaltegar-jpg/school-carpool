@@ -1,365 +1,427 @@
-﻿<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Carpool | Safe Rides Together</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>School Carpool — Same School (Pulang Bermalam & Cuti)</title>
+  <!-- Tailwind via CDN (play) for quick prototype -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    /* Glassy modern card */
+    .glass { background: rgba(255,255,255,0.06); backdrop-filter: blur(8px) saturate(120%); border: 1px solid rgba(255,255,255,0.08); }
+    .accent { color: rgba(99,102,241,1); }
+    #map { height: 220px; border-radius: 0.5rem; }
+  </style>
 </head>
-<body>
-    <div class="container">
-        <!-- Auth View -->
-        <div id="auth-view" class="hidden auth-container">
-            <div class="auth-blob blob-1"></div>
-            <div class="auth-blob blob-2"></div>
-            <div class="auth-content">
-                <div class="auth-icon">🚗</div>
-                <h1 class="auth-title">School Carpool</h1>
-                <p class="auth-subtitle">Connect with trusted parents for safer, smarter student commutes</p>
-                <div class="auth-features">
-                    <div class="feature-item">
-                        <span class="feature-emoji">🛡️</span>
-                        <span>Safe & Verified</span>
-                    </div>
-                    <div class="feature-item">
-                        <span class="feature-emoji">💰</span>
-                        <span>Save Money</span>
-                    </div>
-                    <div class="feature-item">
-                        <span class="feature-emoji">🌍</span>
-                        <span>Eco-Friendly</span>
-                    </div>
-                </div>
-                <button onclick="signIn()" class="btn-auth">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
-                        <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332A8.997 8.997 0 009.003 18z" fill="#34A853" />
-                        <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
-                        <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0A8.997 8.997 0 00.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335" />
-                    </svg>
-                    Continue with Google
-                </button>
-            </div>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-slate-100 p-6">
+  <div class="max-w-5xl mx-auto">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-semibold">School Carpool — Same School</h1>
+      <div>
+        <button id="btn-signin" class="px-4 py-2 rounded-md glass">Sign in with Google</button>
+        <button id="btn-signout" class="px-3 py-2 rounded-md glass hidden">Sign out</button>
+      </div>
+    </header>
+
+    <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Left column: Profile & Children -->
+      <section class="md:col-span-1 glass p-4 rounded-lg">
+        <h2 class="text-lg font-medium">Parent Profile</h2>
+        <div id="profile-area" class="mt-3 space-y-2">
+          <p class="text-sm text-slate-300">Please sign in to continue.</p>
+        </div>
+        <hr class="my-3 border-slate-600" />
+        <h3 class="text-sm font-medium">Children</h3>
+        <div id="children-list" class="mt-2 space-y-2"></div>
+        <button id="btn-add-child" class="mt-3 w-full px-3 py-2 rounded-md glass hidden">Add Child</button>
+      </section>
+
+      <!-- Middle: Trips list -->
+      <section class="md:col-span-2 glass p-4 rounded-lg">
+        <div class="flex items-start justify-between">
+          <h2 class="text-lg font-medium">Available Trips (School-only)</h2>
+          <div class="space-x-2">
+            <button id="btn-create-trip" class="px-3 py-2 rounded-md glass hidden">Create Trip</button>
+            <label class="text-sm text-slate-300">Filter:</label>
+            <select id="filter-trip-type" class="rounded-md bg-transparent px-2 py-1 border border-slate-700">
+              <option value="">All</option>
+              <option value="Pulang Bermalam">Pulang Bermalam</option>
+              <option value="Cuti">Cuti</option>
+            </select>
+          </div>
         </div>
 
-        <!-- Dashboard View -->
-        <div id="dashboard-view" class="hidden">
-            <header class="main-header">
-                <div class="header-left">
-                    <div class="logo">🚗</div>
-                    <div class="header-info">
-                        <h1>School Carpool</h1>
-                        <p id="user-greeting">Welcome back!</p>
-                    </div>
-                </div>
-                <div class="header-right">
-                    <button onclick="openNotifications()" class="icon-btn notification-btn">
-                        <span class="notification-icon">🔔</span>
-                        <span id="notification-badge" class="badge-count hidden">0</span>
-                    </button>
-                    <button onclick="openProfileView()" class="icon-btn profile-btn">
-                        <span>👤</span>
-                    </button>
-                    <button onclick="signOut()" class="btn-outline">Sign Out</button>
-                </div>
-            </header>
+        <div id="trips-area" class="mt-4 space-y-3"></div>
+      </section>
+    </main>
 
-            <!-- Stats Grid -->
-            <div class="stats-grid">
-                <div class="stat-card stat-green">
-                    <div class="stat-icon">🚗</div>
-                    <div class="stat-content">
-                        <h3>Available Trips</h3>
-                        <p id="stat-avail">0</p>
-                    </div>
-                </div>
-                <div class="stat-card stat-blue">
-                    <div class="stat-icon">🎫</div>
-                    <div class="stat-content">
-                        <h3>My Rides</h3>
-                        <p id="stat-rides">0</p>
-                    </div>
-                </div>
-                <div class="stat-card stat-purple">
-                    <div class="stat-icon">🚙</div>
-                    <div class="stat-content">
-                        <h3>Driving</h3>
-                        <p id="stat-driving">0</p>
-                    </div>
-                </div>
-                <div class="stat-card stat-orange">
-                    <div class="stat-icon">📊</div>
-                    <div class="stat-content">
-                        <h3>Total</h3>
-                        <p id="stat-total">0</p>
-                    </div>
-                </div>
-            </div>
+    <footer class="mt-6 text-sm text-slate-400">Hosted: <a class="underline" href="https://arsenaltegar-jpg.github.io/school-carpool" target="_blank">Project GitHub Pages</a> • Uses Supabase Auth & Realtime</footer>
+  </div>
 
-            <!-- Action Buttons -->
-            <div class="action-section">
-                <div id="driver-actions" class="hidden">
-                    <button onclick="openTripModal()" class="btn-primary btn-create">
-                        <span class="btn-icon">➕</span>
-                        Create New Trip
-                    </button>
-                </div>
-                <button onclick="showMyTrips()" class="btn-secondary">
-                    <span class="btn-icon">📋</span>
-                    My Trips
-                </button>
-            </div>
-
-            <!-- Filter Section -->
-            <div class="filter-section">
-                <h2>Available Trips</h2>
-                <div class="filter-controls">
-                    <select id="filter-type" onchange="applyFilters()">
-                        <option value="all">All Types</option>
-                        <option value="morning">Morning</option>
-                        <option value="afternoon">Afternoon</option>
-                    </select>
-                    <select id="filter-date" onchange="applyFilters()">
-                        <option value="all">All Dates</option>
-                        <option value="today">Today</option>
-                        <option value="tomorrow">Tomorrow</option>
-                        <option value="week">This Week</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Trips Grid -->
-            <div id="trips-container" class="trips-grid">
-                <div class="empty-state">
-                    <div class="empty-icon">🚗</div>
-                    <h3>No trips available</h3>
-                    <p>Check back later or create your own trip!</p>
-                </div>
-            </div>
-        </div>
+  <!-- Modals (hidden by default) -->
+  <div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div class="bg-black/60 absolute inset-0" onclick="closeModal()"></div>
+    <div class="relative w-full max-w-2xl p-6 glass rounded-lg z-10">
+      <div id="modal-content"></div>
     </div>
+  </div>
 
-    <!-- Profile Setup Modal -->
-    <div id="profile-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Complete Your Profile</h2>
-                <p>Let's set up your carpool profile</p>
-            </div>
-            <form id="profile-form" onsubmit="saveProfile(event)">
-                <div class="form-group">
-                    <label>Full Name <span class="required">*</span></label>
-                    <input type="text" id="p-name" placeholder="Enter your full name" required>
-                </div>
+  <!-- Dependencies -->
+  <script src="https://unpkg.com/@supabase/supabase-js/dist/umd/supabase.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-                <div class="form-group">
-                    <label>Phone Number <span class="required">*</span></label>
-                    <input type="tel" id="p-phone" placeholder="+60 12-345 6789" required>
-                </div>
+  <script>
+  // ---------------------------
+  // CONFIG (update if needed)
+  // ---------------------------
+  const SUPABASE_URL = 'https://zjxkykvkxfrndlcirfjg.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_MsYFfGjoGA-rl8PCjF-58Q_kGkMvzuF';
+  const SCHOOL_NAME = 'Sekolah Contoh — (fixed)'; // fixed school name for same-school deployment
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Gender <span class="required">*</span></label>
-                        <select id="p-gender" required>
-                            <option value="">Select gender</option>
-                            <option value="Lelaki">Lelaki</option>
-                            <option value="Perempuan">Perempuan</option>
-                        </select>
-                    </div>
+  // Initialize Supabase
+  const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-                    <div class="form-group">
-                        <label>Role <span class="required">*</span></label>
-                        <select id="p-role" required onchange="toggleDriverFields()">
-                            <option value="">Select role</option>
-                            <option value="Passenger">Passenger</option>
-                            <option value="Driver">Driver</option>
-                            <option value="Both">Both</option>
-                        </select>
-                    </div>
-                </div>
+  // ---------------------------
+  // UTIL
+  // ---------------------------
+  function el(html) { const tmp = document.createElement('div'); tmp.innerHTML = html.trim(); return tmp.firstChild; }
+  function openModal(html) { document.getElementById('modal-content').innerHTML = html; document.getElementById('modal').classList.remove('hidden'); document.getElementById('modal').classList.add('flex'); }
+  function closeModal(){ document.getElementById('modal').classList.remove('flex'); document.getElementById('modal').classList.add('hidden'); }
 
-                <div class="form-group">
-                    <label>Home Area <span class="required">*</span></label>
-                    <input type="text" id="p-area" placeholder="e.g., Bandar Baru Bangi" required>
-                </div>
+  // ---------------------------
+  // AUTH
+  // ---------------------------
+  const btnSignin = document.getElementById('btn-signin');
+  const btnSignout = document.getElementById('btn-signout');
+  let currentUser = null;
 
-                <div id="driver-fields" class="hidden">
-                    <div class="form-divider">
-                        <span>Driver Details</span>
-                    </div>
+  btnSignin.addEventListener('click', async ()=>{
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+  });
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Car Model</label>
-                            <input type="text" id="p-car-model" placeholder="e.g., Toyota Camry">
-                        </div>
+  btnSignout.addEventListener('click', async ()=>{
+    await supabase.auth.signOut(); location.reload();
+  });
 
-                        <div class="form-group">
-                            <label>Car Plate</label>
-                            <input type="text" id="p-car-plate" placeholder="e.g., ABC 1234">
-                        </div>
-                    </div>
+  // Handle auth state
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session && session.user) {
+      currentUser = session.user;
+      afterSignIn(session.user);
+    } else {
+      currentUser = null; renderSignedOut();
+    }
+  });
 
-                    <div class="form-group">
-                        <label>Available Seats</label>
-                        <input type="number" id="p-seats" min="1" max="7" placeholder="e.g., 3">
-                    </div>
-                </div>
+  async function afterSignIn(user) {
+    // basic domain restriction example (client-side check)
+    const allowedDomain = null; // e.g. 'school.edu.my' or 'gmail.com' -> set if you want
+    if (allowedDomain) {
+      const email = user.email || '';
+      if (!email.endsWith('@' + allowedDomain)) {
+        alert('Please sign in with the approved school account (@' + allowedDomain + ').');
+        await supabase.auth.signOut();
+        return;
+      }
+    }
 
-                <button type="submit" class="btn-primary btn-full">Save Profile</button>
-            </form>
+    btnSignin.classList.add('hidden'); btnSignout.classList.remove('hidden');
+    // check profile in "parents" table
+    const { data } = await supabase.from('parents').select('*').eq('google_uid', user.id).single().maybeSingle();
+    if (!data) {
+      // create minimal parent record (must complete profile)
+      const profile = { google_uid: user.id, name: user.user_metadata.full_name || user.email.split('@')[0], email: user.email, phone: '', address: '', location_lat: null, location_lng: null, role: 'parent' };
+      const insert = await supabase.from('parents').insert(profile).select().single();
+      // prompt complete profile
+      openProfileForm(insert.data || profile, true);
+    } else {
+      openProfileForm(data, false);
+    }
+
+    // show main UI controls
+    document.getElementById('btn-add-child').classList.remove('hidden');
+    document.getElementById('btn-create-trip').classList.remove('hidden');
+    loadChildren(); loadTrips();
+  }
+
+  function renderSignedOut(){
+    document.getElementById('profile-area').innerHTML = `<p class="text-sm text-slate-300">Please sign in with Google to access the carpool system.</p>`;
+    btnSignin.classList.remove('hidden'); btnSignout.classList.add('hidden');
+    document.getElementById('btn-add-child').classList.add('hidden');
+    document.getElementById('btn-create-trip').classList.add('hidden');
+    document.getElementById('children-list').innerHTML = '';
+    document.getElementById('trips-area').innerHTML = '';
+  }
+
+  // ---------------------------
+  // PROFILE FORM
+  // ---------------------------
+  function openProfileForm(profile, isNew){
+    const html = `
+      <h3 class="text-lg font-medium">Complete Parent Profile</h3>
+      <div class="mt-3 space-y-2">
+        <label class="block text-sm">Full name</label>
+        <input id="pf-name" class="w-full p-2 rounded bg-slate-800" value="${profile.name || ''}" />
+        <label class="block text-sm">Phone (WhatsApp)</label>
+        <input id="pf-phone" class="w-full p-2 rounded bg-slate-800" value="${profile.phone || ''}" />
+        <label class="block text-sm">Address (optional)</label>
+        <input id="pf-address" class="w-full p-2 rounded bg-slate-800" value="${profile.address || ''}" />
+        <div class="flex gap-2">
+          <button id="pf-save" class="px-3 py-2 rounded glass">Save</button>
+          <button id="pf-close" class="px-3 py-2 rounded glass">Close</button>
         </div>
-    </div>
+      </div>
+    `;
+    openModal(html);
+    document.getElementById('pf-close').addEventListener('click', closeModal);
+    document.getElementById('pf-save').addEventListener('click', async ()=>{
+      const name = document.getElementById('pf-name').value.trim();
+      const phone = document.getElementById('pf-phone').value.trim();
+      const address = document.getElementById('pf-address').value.trim();
+      const update = { name, phone, address };
+      await supabase.from('parents').update(update).eq('google_uid', currentUser.id);
+      closeModal();
+      loadChildren();
+    });
+  }
 
-    <!-- Profile View Modal -->
-    <div id="profile-view-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>My Profile</h2>
-                <button onclick="closeProfileView()" class="close-btn">✕</button>
-            </div>
+  // ---------------------------
+  // CHILDREN
+  // ---------------------------
+  document.getElementById('btn-add-child').addEventListener('click', ()=>{
+    const html = `
+      <h3 class="text-lg font-medium">Add Child</h3>
+      <div class="mt-3 space-y-2">
+        <input id="ch-name" placeholder="Name" class="w-full p-2 rounded bg-slate-800" />
+        <select id="ch-gender" class="w-full p-2 rounded bg-slate-800"><option>Male</option><option>Female</option></select>
+        <input id="ch-level" placeholder="Tingkatan (e.g. 1)" class="w-full p-2 rounded bg-slate-800" />
+        <div class="flex gap-2"><button id="ch-save" class="px-3 py-2 rounded glass">Save</button><button id="ch-cancel" class="px-3 py-2 rounded glass">Cancel</button></div>
+      </div>
+    `;
+    openModal(html);
+    document.getElementById('ch-cancel').addEventListener('click', closeModal);
+    document.getElementById('ch-save').addEventListener('click', async ()=>{
+      const name = document.getElementById('ch-name').value.trim();
+      const gender = document.getElementById('ch-gender').value;
+      const level = document.getElementById('ch-level').value.trim();
+      // get parent id
+      const p = await supabase.from('parents').select('*').eq('google_uid', currentUser.id).single();
+      if (!p.data) { alert('Parent not found'); return; }
+      await supabase.from('children').insert({ parent_id: p.data.id, name, gender, form_level: level, school_name: SCHOOL_NAME });
+      closeModal(); loadChildren();
+    });
+  });
 
-            <div id="profile-display" class="profile-display"></div>
+  async function loadChildren(){
+    if (!currentUser) return;
+    const p = await supabase.from('parents').select('*').eq('google_uid', currentUser.id).single();
+    if (!p.data) return;
+    const children = await supabase.from('children').select('*').eq('parent_id', p.data.id);
+    const list = document.getElementById('children-list'); list.innerHTML = '';
+    (children.data || []).forEach(c => {
+      const node = el(`<div class="p-2 rounded border border-slate-700">${c.name} — ${c.gender} — T:${c.form_level}</div>`);
+      list.appendChild(node);
+    });
+  }
 
-            <button onclick="editProfile()" class="btn-primary btn-full">Edit Profile</button>
+  // ---------------------------
+  // TRIPS
+  // ---------------------------
+  document.getElementById('btn-create-trip').addEventListener('click', ()=>{
+    const html = `
+      <h3 class="text-lg font-medium">Create Trip (Driver)</h3>
+      <div class="mt-3 space-y-2">
+        <label>Trip Type</label>
+        <select id="t-type" class="w-full p-2 rounded bg-slate-800"><option>Pulang Bermalam</option><option>Cuti</option></select>
+        <label>Date</label>
+        <input id="t-date" type="date" class="w-full p-2 rounded bg-slate-800" />
+        <label>Time</label>
+        <input id="t-time" type="time" class="w-full p-2 rounded bg-slate-800" />
+        <label>Available seats</label>
+        <input id="t-seats" type="number" min="1" value="3" class="w-full p-2 rounded bg-slate-800" />
+        <label>Destination</label>
+        <input id="t-dest" class="w-full p-2 rounded bg-slate-800" placeholder="e.g. Home Town / Bandar" />
+        <label>Remarks</label>
+        <input id="t-remarks" class="w-full p-2 rounded bg-slate-800" placeholder="Optional" />
+        <div class="flex gap-2"><button id="t-save" class="px-3 py-2 rounded glass">Create</button><button id="t-cancel" class="px-3 py-2 rounded glass">Cancel</button></div>
+      </div>
+    `;
+    openModal(html);
+    document.getElementById('t-cancel').addEventListener('click', closeModal);
+    document.getElementById('t-save').addEventListener('click', async ()=>{
+      const type = document.getElementById('t-type').value;
+      const date = document.getElementById('t-date').value;
+      const time = document.getElementById('t-time').value;
+      const seats = parseInt(document.getElementById('t-seats').value)||1;
+      const dest = document.getElementById('t-dest').value.trim();
+      const remarks = document.getElementById('t-remarks').value.trim();
+      const p = await supabase.from('parents').select('*').eq('google_uid', currentUser.id).single();
+      if (!p.data) { alert('Parent not found'); return; }
+      await supabase.from('trips').insert({ driver_id: p.data.id, trip_type: type, origin: 'Sekolah', destination: dest, date, time, available_seats: seats, remarks, status: 'Active' });
+      closeModal(); loadTrips();
+    });
+  });
+
+  function tripCard(trip, driver){
+    const node = el(`
+      <div class="p-3 rounded border border-slate-700 grid md:grid-cols-3 gap-2">
+        <div>
+          <div class="font-semibold">${trip.trip_type} — ${trip.date} ${trip.time}</div>
+          <div class="text-sm text-slate-300">From: ${trip.origin} • To: ${trip.destination}</div>
+          <div class="text-xs mt-1 text-slate-400">${trip.remarks||''}</div>
         </div>
-    </div>
-
-    <!-- Trip Creation/Edit Modal -->
-    <div id="trip-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Create Trip</h2>
-                <button onclick="closeModal()" class="close-btn">✕</button>
-            </div>
-            <form id="trip-form" onsubmit="saveTrip(event)">
-                <input type="hidden" id="t-id">
-
-                <div class="form-group">
-                    <label>Trip Title <span class="required">*</span></label>
-                    <input type="text" id="t-title" placeholder="e.g., Morning School Run" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Pickup Point <span class="required">*</span></label>
-                    <input type="text" id="t-start" placeholder="Starting location" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Destination <span class="required">*</span></label>
-                    <input type="text" id="t-dest" placeholder="School name or address" required>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Date <span class="required">*</span></label>
-                        <input type="date" id="t-date" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Time <span class="required">*</span></label>
-                        <input type="time" id="t-time" required>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Trip Type <span class="required">*</span></label>
-                        <select id="t-type" required>
-                            <option value="morning">Morning</option>
-                            <option value="afternoon">Afternoon</option>
-                            <option value="both">Both</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Gender Filter</label>
-                        <select id="t-gender">
-                            <option value="Mixed">Mixed</option>
-                            <option value="Lelaki">Lelaki Only</option>
-                            <option value="Perempuan">Perempuan Only</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Available Seats <span class="required">*</span></label>
-                    <input type="number" id="t-seats" placeholder="How many seats?" min="1" max="7" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Notes (Optional)</label>
-                    <textarea id="t-notes" rows="3" placeholder="Additional information for passengers..."></textarea>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn-primary btn-full">Confirm Trip</button>
-                    <button type="button" onclick="closeModal()" class="btn-outline btn-full">Cancel</button>
-                </div>
-            </form>
+        <div class="text-center">
+          <div class="text-sm">Seats: <strong>${trip.available_seats}</strong></div>
+          <div class="text-sm mt-2">Driver: ${driver ? driver.name : '—'}</div>
+          <div class="text-sm">Contact: ${driver ? driver.phone || '—' : '—'}</div>
         </div>
-    </div>
-
-    <!-- Trip Details Modal -->
-    <div id="trip-details-modal" class="modal hidden">
-        <div class="modal-content modal-lg">
-            <div class="modal-header">
-                <h2>Trip Details</h2>
-                <button onclick="closeTripDetails()" class="close-btn">✕</button>
-            </div>
-            <div id="trip-details-content"></div>
+        <div class="flex items-center justify-end gap-2">
+          <button class="btn-book px-3 py-1 rounded glass" data-id="${trip.id}">Book</button>
+          ${driver && driver.google_uid === (currentUser? currentUser.id : '') ? `<button class="btn-manage px-3 py-1 rounded glass" data-id="${trip.id}">Manage</button>` : ''}
+          <button class="btn-whatsapp px-3 py-1 rounded glass" data-phone="${driver ? driver.phone : ''}" data-name="${driver ? driver.name : ''}" data-trip="${trip.trip_type}" data-date="${trip.date}" data-child="">WhatsApp</button>
         </div>
-    </div>
+      </div>
+    `);
+    // events
+    node.querySelector('.btn-whatsapp')?.addEventListener('click', (e)=>{
+      const btn = e.currentTarget; const phone = btn.dataset.phone; const driverName = btn.dataset.name; const tripType = btn.dataset.trip; const tripDate = btn.dataset.date; const childName = '';
+      if (!phone) return alert('Driver phone not provided');
+      const message = `Hi ${driverName}, I'm interested in your ${tripType} trip on ${tripDate}.`;
+      const url = `https://wa.me/${phone.replace(/[^0-9]/g,'')}?text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+    });
 
-    <!-- Notifications Panel -->
-    <div id="notifications-panel" class="side-panel hidden">
-        <div class="panel-header">
-            <h3>Notifications</h3>
-            <button onclick="closeNotifications()" class="close-btn">✕</button>
+    node.querySelector('.btn-book')?.addEventListener('click', async (e)=>{
+      if (!currentUser) return alert('Please sign in first');
+      const tripId = e.currentTarget.dataset.id;
+      // choose child
+      const p = await supabase.from('parents').select('*').eq('google_uid', currentUser.id).single();
+      const children = await supabase.from('children').select('*').eq('parent_id', p.data.id);
+      const childOptions = (children.data||[]).map(c=>`<option value="${c.id}">${c.name} (${c.form_level})</option>`).join('');
+      const html = `
+        <h3 class="text-lg">Select child to book</h3>
+        <div class="mt-3">
+          <select id="book-child" class="w-full p-2 rounded bg-slate-800">${childOptions}</select>
+          <div class="flex gap-2 mt-3"><button id="book-confirm" class="px-3 py-2 rounded glass">Confirm Booking</button><button id="book-cancel" class="px-3 py-2 rounded glass">Cancel</button></div>
         </div>
-        <div class="panel-content" id="notifications-content">
-            <div class="empty-state">
-                <div class="empty-icon">🔔</div>
-                <p>No notifications yet</p>
-            </div>
-        </div>
-    </div>
+      `;
+      openModal(html);
+      document.getElementById('book-cancel').addEventListener('click', closeModal);
+      document.getElementById('book-confirm').addEventListener('click', async ()=>{
+        const childId = document.getElementById('book-child').value;
+        // check duplicate booking same date
+        const trip = await supabase.from('trips').select('*').eq('id', tripId).single();
+        if (!trip.data) return alert('Trip not found');
+        const sameDate = await supabase.from('trip_passengers').select('*,trips(*)').eq('child_id', childId).eq('status','Confirmed').maybeSingle();
+        // instead of maybeSingle use filtering by date
+        const existing = await supabase.rpc('check_child_trip_on_date', { _child_id: childId, _trip_date: trip.data.date }).catch(()=>({data: null}));
+        // if rpc not available, skip strict check (best effort)
+        // insert booking as Pending then update available seats when Confirmed by driver or auto-confirm
+        await supabase.from('trip_passengers').insert({ trip_id: tripId, child_id: childId, booked_by_parent_id: p.data.id, status: 'Confirmed' });
+        // decrement available seats
+        await supabase.from('trips').update({ available_seats: trip.data.available_seats - 1 }).eq('id', tripId);
+        closeModal(); loadTrips();
+        // open whatsapp to notify driver
+        const driver = await supabase.from('parents').select('*').eq('id', trip.data.driver_id).single();
+        const driverPhone = driver.data?.phone || '';
+        const driverName = driver.data?.name || 'Driver';
+        const child = (children.data||[]).find(c=>c.id===childId);
+        const message = `Hi ${driverName}, I'm interested in your ${trip.data.trip_type} trip on ${trip.data.date} for ${child.name}. Please confirm.`;
+        if (driverPhone) window.open(`https://wa.me/${driverPhone.replace(/[^0-9]/g,'')}?text=${encodeURIComponent(message)}`, '_blank');
+      });
+    });
 
-    <!-- My Trips View -->
-    <div id="my-trips-modal" class="modal hidden">
-        <div class="modal-content modal-lg">
-            <div class="modal-header">
-                <h2>My Trips</h2>
-                <button onclick="closeMyTrips()" class="close-btn">✕</button>
-            </div>
+    return node;
+  }
 
-            <div class="tabs">
-                <button class="tab active" onclick="switchTab('joined')">Joined Trips</button>
-                <button class="tab" onclick="switchTab('driving')">My Driving</button>
-            </div>
+  async function loadTrips(){
+    const filter = document.getElementById('filter-trip-type').value;
+    let q = supabase.from('trips').select('*').eq('status','Active').order('date', { ascending: true });
+    if (filter) q = q.eq('trip_type', filter);
+    const res = await q;
+    const trips = res.data || [];
+    const area = document.getElementById('trips-area'); area.innerHTML = '';
+    for (const trip of trips) {
+      const driver = await supabase.from('parents').select('*').eq('id', trip.driver_id).single();
+      area.appendChild(tripCard(trip, driver.data));
+    }
+  }
 
-            <div id="joined-trips" class="tab-content">
-                <div id="joined-trips-list"></div>
-            </div>
+  document.getElementById('filter-trip-type').addEventListener('change', loadTrips);
 
-            <div id="driving-trips" class="tab-content hidden">
-                <div id="driving-trips-list"></div>
-            </div>
-        </div>
-    </div>
+  // ---------------------------
+  // OPTIONAL: Realtime (basic)
+  // ---------------------------
+  // Subscribe to changes and refresh list
+  supabase.channel('public:trips').on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, (payload) => {
+    loadTrips();
+  }).subscribe();
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay hidden">
-        <div class="spinner"></div>
-    </div>
+  // ---------------------------
+  // ON LOAD: check session
+  // ---------------------------
+  (async ()=>{
+    const session = supabase.auth.getSession().then(r=>{ if (r?.data?.session?.user) { currentUser = r.data.session.user; afterSignIn(r.data.session.user); } else renderSignedOut(); }).catch(()=>renderSignedOut());
+  })();
 
-    <!-- Toast Notifications -->
-    <div id="toast-container" class="toast-container"></div>
+  // ---------------------------
+  // NOTES & SQL (run on Supabase SQL editor to create tables)
+  // ---------------------------
+  //
+  // CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+  //
+  // create table parents (
+  //   id uuid primary key default gen_random_uuid(),
+  //   google_uid text unique,
+  //   name text,
+  //   email text,
+  //   phone text,
+  //   address text,
+  //   location_lat float,
+  //  location_lng float,
+  //   role text default 'parent'
+  // );
+  //
+  // create table children (
+  //   id uuid primary key default gen_random_uuid(),
+  //   parent_id uuid references parents(id) on delete cascade,
+  //   name text,
+  //   gender text,
+  //   form_level text,
+  //   school_name text
+  // );
+  //
+  // create table trips (
+  //   id uuid primary key default gen_random_uuid(),
+  //   driver_id uuid references parents(id) on delete set null,
+  //   trip_type text,
+  //   origin text,
+  //   origin_lat float,
+  //   origin_lng float,
+  //   destination text,
+  //   destination_lat float,
+  //   destination_lng float,
+  //   date date,
+  //   time time,
+  //   available_seats int,
+  //   remarks text,
+  //   status text default 'Active'
+  // );
+  //
+  // create table trip_passengers (
+  //   id uuid primary key default gen_random_uuid(),
+  //   trip_id uuid references trips(id) on delete cascade,
+  //   child_id uuid references children(id) on delete cascade,
+  //   booked_by_parent_id uuid references parents(id),
+  //   status text default 'Pending'
+  // );
+  //
+  // Optional RPC check function (example)
+  // create function check_child_trip_on_date(_child_id uuid, _trip_date date) returns boolean as $$
+  //   select exists(select 1 from trip_passengers tp join trips t on t.id=tp.trip_id where tp.child_id=_child_id and t.date=_trip_date and tp.status='Confirmed');
+  // $$ language sql stable;
 
-    <script src="app.js"></script>
+  </script>
 </body>
 </html>
