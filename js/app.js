@@ -187,7 +187,19 @@ async function initializeDashboard() {
     }
     await renderDashboard();
 }
-
+async function renderDashboard() {
+    const trips = await loadTrips();
+    const container = document.getElementById('tripsContainer');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (trips.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+    } else {
+        emptyState.classList.add('hidden');
+        container.innerHTML = trips.map(trip => renderTripCard(trip)).join('');
+    }
+}
 document.addEventListener('DOMContentLoaded', () => {
     // Start auth process
     initializeAuth();
