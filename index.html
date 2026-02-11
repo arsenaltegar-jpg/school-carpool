@@ -68,7 +68,7 @@
     const SUPABASE_KEY = 'sb_publishable_MsYFfGjoGA-rl8PCjF-58Q_kGkMvzuF';
     const SCHOOL_NAME = 'Sekolah Contoh — (fixed)';
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const sbClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const btnSignin = document.getElementById('btn-signin');
     const btnSignout = document.getElementById('btn-signout');
@@ -79,14 +79,14 @@
     function closeModal(){ document.getElementById('modal').classList.remove('flex'); document.getElementById('modal').classList.add('hidden'); }
 
     btnSignin.addEventListener('click', async ()=>{
-      await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+      await sbClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
     });
 
     btnSignout.addEventListener('click', async ()=>{
-      await supabase.auth.signOut(); location.reload();
+      await sbClient.auth.signOut(); location.reload();
     });
 
-    supabase.auth.onAuthStateChange((event, session) => {
+    sbClient.auth.onAuthStateChange((event, session) => {
       if (session && session.user) {
         currentUser=session.user; afterSignIn(session.user);
       } else { currentUser=null; renderSignedOut(); }
@@ -94,10 +94,10 @@
 
     async function afterSignIn(user){
       btnSignin.classList.add('hidden'); btnSignout.classList.remove('hidden');
-      const { data } = await supabase.from('parents').select('*').eq('google_uid', user.id).single().maybeSingle();
+      const { data } = await sbClient.from('parents').select('*').eq('google_uid', user.id).single().maybeSingle();
       if(!data){
         const profile = { google_uid:user.id, name:user.user_metadata.full_name||user.email.split('@')[0], email:user.email, phone:'', address:'', role:'parent'};
-        const insert = await supabase.from('parents').insert(profile).select().single();
+        const insert = await sbClient.from('parents').insert(profile).select().single();
         openProfileForm(insert.data||profile,true);
       } else { openProfileForm(data,false); }
       document.getElementById('btn-add-child').classList.remove('hidden');
@@ -127,7 +127,7 @@
         const name=document.getElementById('pf-name').value.trim();
         const phone=document.getElementById('pf-phone').value.trim();
         const address=document.getElementById('pf-address').value.trim();
-        await supabase.from('parents').update({name,phone,address}).eq('google_uid',currentUser.id);
+        await sbClient.from('parents').update({name,phone,address}).eq('google_uid',currentUser.id);
         closeModal(); loadChildren();
       };
     }
@@ -144,16 +144,16 @@
         const name=document.getElementById('ch-name').value.trim();
         const gender=document.getElementById('ch-gender').value;
         const level=document.getElementById('ch-level').value.trim();
-        const p=await supabase.from('parents').select('*').eq('google_uid',currentUser.id).single();
-        await supabase.from('children').insert({parent_id:p.data.id,name,gender,form_level:level,school_name:SCHOOL_NAME});
+        const p=await sbClient.from('parents').select('*').eq('google_uid',currentUser.id).single();
+        await sbClient.from('children').insert({parent_id:p.data.id,name,gender,form_level:level,school_name:SCHOOL_NAME});
         closeModal(); loadChildren();
       };
     };
 
     async function loadChildren(){
       if(!currentUser)return;
-      const p=await supabase.from('parents').select('*').eq('google_uid',currentUser.id).single();
-      const children=await supabase.from('children').select('*').eq('parent_id',p.data.id);
+      const p=await sbClient.from('parents').select('*').eq('google_uid',currentUser.id).single();
+      const children=await sbClient.from('children').select('*').eq('parent_id',p.data.id);
       const list=document.getElementById('children-list'); list.innerHTML='';
       (children.data||[]).forEach(c=>list.append(el(`<div class='p-2 rounded border border-slate-700'>${c.name} — ${c.gender} — T:${c.form_level}</div>`)));
     }
@@ -176,21 +176,21 @@
         const seats=parseInt(document.getElementById('t-seats').value)||1;
         const dest=document.getElementById('t-dest').value.trim();
         const remarks=document.getElementById('t-remarks').value.trim();
-        const p=await supabase.from('parents').select('*').eq('google_uid',currentUser.id).single();
-        await supabase.from('trips').insert({driver_id:p.data.id,trip_type:type,origin:'Sekolah',destination:dest,date,time,available_seats:seats,remarks,status:'Active'});
+        const p=await sbClient.from('parents').select('*').eq('google_uid',currentUser.id).single();
+        await sbClient.from('trips').insert({driver_id:p.data.id,trip_type:type,origin:'Sekolah',destination:dest,date,time,available_seats:seats,remarks,status:'Active'});
         closeModal(); loadTrips();
       };
     };
 
     async function loadTrips(){
       const filter=document.getElementById('filter-trip-type').value;
-      let q=supabase.from('trips').select('*').eq('status','Active').order('date',{ascending:true});
+      let q=sbClient.from('trips').select('*').eq('status','Active').order('date',{ascending:true});
       if(filter)q=q.eq('trip_type',filter);
       const res=await q;
       const trips=res.data||[];
       const area=document.getElementById('trips-area'); area.innerHTML='';
       for(const trip of trips){
-        const driver=await supabase.from('parents').select('*').eq('id',trip.driver_id).single();
+        const driver=await sbClient.from('parents').select('*').eq('id',trip.driver_id).single();
         const node=el(`<div class='p-3 rounded border border-slate-700 grid md:grid-cols-3 gap-2'>
           <div><div class='font-semibold'>${trip.trip_type} — ${trip.date} ${trip.time}</div><div class='text-sm text-slate-300'>To: ${trip.destination}</div></div>
           <div class='text-center'><div>Seats: ${trip.available_seats}</div><div>Driver: ${driver.data?.name||''}</div><div>${driver.data?.phone||''}</div></div>
@@ -207,8 +207,8 @@
         node.querySelector('.btn-book').onclick=async(e)=>{
           if(!currentUser)return alert('Sign in first');
           const tripId=e.currentTarget.dataset.id;
-          const p=await supabase.from('parents').select('*').eq('google_uid',currentUser.id).single();
-          const children=await supabase.from('children').select('*').eq('parent_id',p.data.id);
+          const p=await sbClient.from('parents').select('*').eq('google_uid',currentUser.id).single();
+          const children=await sbClient.from('children').select('*').eq('parent_id',p.data.id);
           const childOptions=(children.data||[]).map(c=>`<option value='${c.id}'>${c.name} (${c.form_level})</option>`).join('');
           const html=`<h3 class='text-lg'>Select child</h3><select id='book-child' class='w-full p-2 rounded bg-slate-800 mt-3'>${childOptions}</select>
           <div class='flex gap-2 mt-3'><button id='book-confirm' class='px-3 py-2 rounded glass'>Confirm</button><button id='book-cancel' class='px-3 py-2 rounded glass'>Cancel</button></div>`;
@@ -216,8 +216,8 @@
           document.getElementById('book-cancel').onclick=closeModal;
           document.getElementById('book-confirm').onclick=async()=>{
             const childId=document.getElementById('book-child').value;
-            const trip=await supabase.from('trips').select('*').eq('id',tripId).single();
-            await supabase.from('trip_passengers').insert({trip_id:tripId,child_id:childId,booked_by_parent_id:p.data.id,status:'Confirmed'});
-            await supabase.from('trips').update({available_seats:trip.data.available_seats-1}).eq('id',tripId);
+            const trip=await sbClient.from('trips').select('*').eq('id',tripId).single();
+            await sbClient.from('trip_passengers').insert({trip_id:tripId,child_id:childId,booked_by_parent_id:p.data.id,status:'Confirmed'});
+            await sbClient.from('trips').update({available_seats:trip.data.available_seats-1}).eq('id',tripId);
             closeModal(); loadTrips();
-            const driver=await supabase.from('parents').select
+            const driver=await sbClient.from('parents').select
