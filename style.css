@@ -1129,3 +1129,216 @@ textarea {
         grid-template-columns: 1fr;
     }
 }
+/* ============================================
+   ADDITIONAL STYLES FOR CANCEL BUTTONS
+   Add this to your existing CSS file
+   ============================================ */
+
+/* Primary Button (Join Trip, View Details) */
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:active {
+        transform: translateY(0);
+    }
+
+/* Secondary Button (Edit, Close) */
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.2);
+}
+
+    .btn-secondary:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+    }
+
+    .btn-secondary:active {
+        transform: translateY(0);
+    }
+
+/* Danger Button (Cancel Trip, Delete) */
+.btn-danger {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+    .btn-danger:hover {
+        background: linear-gradient(135deg, #ee5a6f 0%, #dc3545 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+    }
+
+    .btn-danger:active {
+        transform: translateY(0);
+    }
+
+/* Button Group (for side-by-side buttons) */
+.button-group {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+    .button-group button {
+        flex: 1;
+    }
+
+/* Modal Close Button (X button) */
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #666;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+    .modal-close:hover {
+        background: rgba(255, 107, 107, 0.2);
+        color: #ff6b6b;
+        transform: rotate(90deg);
+    }
+
+    .modal-close:active {
+        transform: rotate(90deg) scale(0.95);
+    }
+
+/* Modal Header with Close Button */
+.modal-header {
+    position: relative;
+    padding-right: 3rem; /* Space for close button */
+}
+
+/* Card Buttons Container */
+.card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+    .card-actions button {
+        flex: 1;
+        min-width: 0; /* Allow buttons to shrink if needed */
+    }
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger {
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .card-actions {
+        gap: 0.375rem;
+    }
+
+    .button-group {
+        gap: 0.5rem;
+    }
+}
+
+/* Full width button option */
+.btn-full {
+    width: 100%;
+}
+
+/* Icon buttons */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+    .btn-icon::before {
+        font-size: 1.1em;
+    }
+
+/* Disabled state */
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+    .btn-primary:disabled:hover,
+    .btn-secondary:disabled:hover,
+    .btn-danger:disabled:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+/* Loading state */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+    .btn-loading::after {
+        content: "";
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        top: 50%;
+        left: 50%;
+        margin-left: -8px;
+        margin-top: -8px;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spinner 0.6s linear infinite;
+    }
+
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
