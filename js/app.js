@@ -121,10 +121,14 @@ function prefillProfileForm() {
 }
 
 async function signInWithGoogle() {
+    // Dynamically get the current origin (e.g., your GitHub Pages URL or localhost)
+    const redirectUrl = window.location.origin + window.location.pathname;
+
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: window.location.origin
+            // This must match one of the URLs in your Supabase "Redirect URLs" list
+            redirectTo: redirectUrl 
         }
     });
     
