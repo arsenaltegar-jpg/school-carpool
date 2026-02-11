@@ -2,91 +2,363 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>School Carpool | Safe Rides</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Carpool | Safe Rides Together</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="container">
-        <div id="auth-view" class="hidden" style="text-align: center; padding-top: 100px;">
-            <h1>🚗 School Carpool</h1>
-            <p>Connect with other parents for safer student commutes.</p>
-            <button onclick="signIn()" class="btn-primary" style="width: auto; padding: 15px 40px;">Sign in with Google</button>
+        <!-- Auth View -->
+        <div id="auth-view" class="hidden auth-container">
+            <div class="auth-blob blob-1"></div>
+            <div class="auth-blob blob-2"></div>
+            <div class="auth-content">
+                <div class="auth-icon">🚗</div>
+                <h1 class="auth-title">School Carpool</h1>
+                <p class="auth-subtitle">Connect with trusted parents for safer, smarter student commutes</p>
+                <div class="auth-features">
+                    <div class="feature-item">
+                        <span class="feature-emoji">🛡️</span>
+                        <span>Safe & Verified</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-emoji">💰</span>
+                        <span>Save Money</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-emoji">🌍</span>
+                        <span>Eco-Friendly</span>
+                    </div>
+                </div>
+                <button onclick="signIn()" class="btn-auth">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
+                        <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332A8.997 8.997 0 009.003 18z" fill="#34A853" />
+                        <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
+                        <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0A8.997 8.997 0 00.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335" />
+                    </svg>
+                    Continue with Google
+                </button>
+            </div>
         </div>
 
+        <!-- Dashboard View -->
         <div id="dashboard-view" class="hidden">
-            <header>
-                <div>
-                    <h1>School Carpool</h1>
-                    <p>Safe rides for students</p>
+            <header class="main-header">
+                <div class="header-left">
+                    <div class="logo">🚗</div>
+                    <div class="header-info">
+                        <h1>School Carpool</h1>
+                        <p id="user-greeting">Welcome back!</p>
+                    </div>
                 </div>
-                <button onclick="signOut()" class="btn-outline">Sign Out</button>
+                <div class="header-right">
+                    <button onclick="openNotifications()" class="icon-btn notification-btn">
+                        <span class="notification-icon">🔔</span>
+                        <span id="notification-badge" class="badge-count hidden">0</span>
+                    </button>
+                    <button onclick="openProfileView()" class="icon-btn profile-btn">
+                        <span>👤</span>
+                    </button>
+                    <button onclick="signOut()" class="btn-outline">Sign Out</button>
+                </div>
             </header>
 
+            <!-- Stats Grid -->
             <div class="stats-grid">
-                <div class="stat-card green"><h3>Available Trips</h3><p id="stat-avail">0</p></div>
-                <div class="stat-card blue"><h3>My Rides</h3><p id="stat-rides">0</p></div>
-                <div class="stat-card purple"><h3>Driving</h3><p id="stat-driving">0</p></div>
-                <div class="stat-card orange"><h3>Total Trips</h3><p id="stat-total">0</p></div>
+                <div class="stat-card stat-green">
+                    <div class="stat-icon">🚗</div>
+                    <div class="stat-content">
+                        <h3>Available Trips</h3>
+                        <p id="stat-avail">0</p>
+                    </div>
+                </div>
+                <div class="stat-card stat-blue">
+                    <div class="stat-icon">🎫</div>
+                    <div class="stat-content">
+                        <h3>My Rides</h3>
+                        <p id="stat-rides">0</p>
+                    </div>
+                </div>
+                <div class="stat-card stat-purple">
+                    <div class="stat-icon">🚙</div>
+                    <div class="stat-content">
+                        <h3>Driving</h3>
+                        <p id="stat-driving">0</p>
+                    </div>
+                </div>
+                <div class="stat-card stat-orange">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-content">
+                        <h3>Total</h3>
+                        <p id="stat-total">0</p>
+                    </div>
+                </div>
             </div>
 
-            <div id="driver-actions" class="hidden" style="margin-bottom: 20px;">
-                <button onclick="openTripModal()" class="purple" style="color:white">+ Create New Trip</button>
+            <!-- Action Buttons -->
+            <div class="action-section">
+                <div id="driver-actions" class="hidden">
+                    <button onclick="openTripModal()" class="btn-primary btn-create">
+                        <span class="btn-icon">➕</span>
+                        Create New Trip
+                    </button>
+                </div>
+                <button onclick="showMyTrips()" class="btn-secondary">
+                    <span class="btn-icon">📋</span>
+                    My Trips
+                </button>
             </div>
 
-            <h2>Available Trips</h2>
-            <div id="trips-container" class="trips-grid"></div>
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <h2>Available Trips</h2>
+                <div class="filter-controls">
+                    <select id="filter-type" onchange="applyFilters()">
+                        <option value="all">All Types</option>
+                        <option value="morning">Morning</option>
+                        <option value="afternoon">Afternoon</option>
+                    </select>
+                    <select id="filter-date" onchange="applyFilters()">
+                        <option value="all">All Dates</option>
+                        <option value="today">Today</option>
+                        <option value="tomorrow">Tomorrow</option>
+                        <option value="week">This Week</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Trips Grid -->
+            <div id="trips-container" class="trips-grid">
+                <div class="empty-state">
+                    <div class="empty-icon">🚗</div>
+                    <h3>No trips available</h3>
+                    <p>Check back later or create your own trip!</p>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Profile Setup Modal -->
     <div id="profile-modal" class="modal hidden">
         <div class="modal-content">
-            <h2>Complete Your Profile</h2>
-            <form id="profile-form">
-                <label>Full Name</label>
-                <input type="text" id="p-name" required>
-                <label>Phone Number</label>
-                <input type="tel" id="p-phone" placeholder="+60..." required>
-                <label>Gender</label>
-                <select id="p-gender" required>
-                    <option value="Lelaki">Lelaki</option>
-                    <option value="Perempuan">Perempuan</option>
-                </select>
-                <label>Role</label>
-                <select id="p-role" required>
-                    <option value="Passenger">Passenger (Find Rides)</option>
-                    <option value="Driver">Driver (Offer Rides)</option>
-                    <option value="Both">Both</option>
-                </select>
-                <label>Home Area</label>
-                <input type="text" id="p-area" placeholder="e.g., Bandar Baru Bangi" required>
-                <button type="submit" class="btn-primary">Save Profile</button>
+            <div class="modal-header">
+                <h2>Complete Your Profile</h2>
+                <p>Let's set up your carpool profile</p>
+            </div>
+            <form id="profile-form" onsubmit="saveProfile(event)">
+                <div class="form-group">
+                    <label>Full Name <span class="required">*</span></label>
+                    <input type="text" id="p-name" placeholder="Enter your full name" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Phone Number <span class="required">*</span></label>
+                    <input type="tel" id="p-phone" placeholder="+60 12-345 6789" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Gender <span class="required">*</span></label>
+                        <select id="p-gender" required>
+                            <option value="">Select gender</option>
+                            <option value="Lelaki">Lelaki</option>
+                            <option value="Perempuan">Perempuan</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Role <span class="required">*</span></label>
+                        <select id="p-role" required onchange="toggleDriverFields()">
+                            <option value="">Select role</option>
+                            <option value="Passenger">Passenger</option>
+                            <option value="Driver">Driver</option>
+                            <option value="Both">Both</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Home Area <span class="required">*</span></label>
+                    <input type="text" id="p-area" placeholder="e.g., Bandar Baru Bangi" required>
+                </div>
+
+                <div id="driver-fields" class="hidden">
+                    <div class="form-divider">
+                        <span>Driver Details</span>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Car Model</label>
+                            <input type="text" id="p-car-model" placeholder="e.g., Toyota Camry">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Car Plate</label>
+                            <input type="text" id="p-car-plate" placeholder="e.g., ABC 1234">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Available Seats</label>
+                        <input type="number" id="p-seats" min="1" max="7" placeholder="e.g., 3">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary btn-full">Save Profile</button>
             </form>
         </div>
     </div>
 
+    <!-- Profile View Modal -->
+    <div id="profile-view-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>My Profile</h2>
+                <button onclick="closeProfileView()" class="close-btn">✕</button>
+            </div>
+
+            <div id="profile-display" class="profile-display"></div>
+
+            <button onclick="editProfile()" class="btn-primary btn-full">Edit Profile</button>
+        </div>
+    </div>
+
+    <!-- Trip Creation/Edit Modal -->
     <div id="trip-modal" class="modal hidden">
         <div class="modal-content">
-            <h2 id="modal-title">Create Trip</h2>
-            <form id="trip-form">
+            <div class="modal-header">
+                <h2 id="modal-title">Create Trip</h2>
+                <button onclick="closeModal()" class="close-btn">✕</button>
+            </div>
+            <form id="trip-form" onsubmit="saveTrip(event)">
                 <input type="hidden" id="t-id">
-                <input type="text" id="t-title" placeholder="Trip Title" required>
-                <input type="text" id="t-start" placeholder="Pickup Point" required>
-                <input type="text" id="t-dest" placeholder="Destination School" required>
-                <div style="display: flex; gap: 10px;">
-                    <input type="date" id="t-date" required>
-                    <input type="time" id="t-time" required>
+
+                <div class="form-group">
+                    <label>Trip Title <span class="required">*</span></label>
+                    <input type="text" id="t-title" placeholder="e.g., Morning School Run" required>
                 </div>
-                <select id="t-type">
-                    <option value="morning">Morning</option>
-                    <option value="afternoon">Afternoon</option>
-                </select>
-                <input type="number" id="t-seats" placeholder="Seats Available" min="1" required>
-                <button type="submit" class="btn-primary">Confirm Trip</button>
-                <button type="button" onclick="closeModal()" class="btn-outline" style="width:100%; margin-top:10px;">Cancel</button>
+
+                <div class="form-group">
+                    <label>Pickup Point <span class="required">*</span></label>
+                    <input type="text" id="t-start" placeholder="Starting location" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Destination <span class="required">*</span></label>
+                    <input type="text" id="t-dest" placeholder="School name or address" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date <span class="required">*</span></label>
+                        <input type="date" id="t-date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Time <span class="required">*</span></label>
+                        <input type="time" id="t-time" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Trip Type <span class="required">*</span></label>
+                        <select id="t-type" required>
+                            <option value="morning">Morning</option>
+                            <option value="afternoon">Afternoon</option>
+                            <option value="both">Both</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Gender Filter</label>
+                        <select id="t-gender">
+                            <option value="Mixed">Mixed</option>
+                            <option value="Lelaki">Lelaki Only</option>
+                            <option value="Perempuan">Perempuan Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Available Seats <span class="required">*</span></label>
+                    <input type="number" id="t-seats" placeholder="How many seats?" min="1" max="7" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Notes (Optional)</label>
+                    <textarea id="t-notes" rows="3" placeholder="Additional information for passengers..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary btn-full">Confirm Trip</button>
+                    <button type="button" onclick="closeModal()" class="btn-outline btn-full">Cancel</button>
+                </div>
             </form>
         </div>
     </div>
+
+    <!-- Trip Details Modal -->
+    <div id="trip-details-modal" class="modal hidden">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2>Trip Details</h2>
+                <button onclick="closeTripDetails()" class="close-btn">✕</button>
+            </div>
+            <div id="trip-details-content"></div>
+        </div>
+    </div>
+
+    <!-- Notifications Panel -->
+    <div id="notifications-panel" class="side-panel hidden">
+        <div class="panel-header">
+            <h3>Notifications</h3>
+            <button onclick="closeNotifications()" class="close-btn">✕</button>
+        </div>
+        <div class="panel-content" id="notifications-content">
+            <div class="empty-state">
+                <div class="empty-icon">🔔</div>
+                <p>No notifications yet</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Trips View -->
+    <div id="my-trips-modal" class="modal hidden">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2>My Trips</h2>
+                <button onclick="closeMyTrips()" class="close-btn">✕</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('joined')">Joined Trips</button>
+                <button class="tab" onclick="switchTab('driving')">My Driving</button>
+            </div>
+
+            <div id="joined-trips" class="tab-content">
+                <div id="joined-trips-list"></div>
+            </div>
+
+            <div id="driving-trips" class="tab-content hidden">
+                <div id="driving-trips-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
 
     <script src="app.js"></script>
 </body>
