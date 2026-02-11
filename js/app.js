@@ -1,13 +1,14 @@
 // ===================================
 // SCHOOL CARPOOL WEB APPLICATION
-// Main JavaScript File - Fixed Version
+// Main JavaScript File - FULL FIX
 // ===================================
 
-// Configuration
+// 1. Configuration
 const SUPABASE_URL = 'https://zjxkykvkxfrndlcirfjg.supabase.co'; 
 const SUPABASE_ANON_KEY = 'sb_publishable_MsYFfGjoGA-rl8PCjF-58Q_kGkMvzuF'; 
 
-// Initialize Supabase client - Standardized name to 'supabase'
+// 2. Initialize Supabase client 
+// Standardizing name to 'supabase' globally to match your function calls
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Global state
@@ -34,14 +35,15 @@ function showPage(pageId) {
         const el = document.getElementById(page);
         if (el) el.classList.add('hidden');
     });
+    
     const targetPage = document.getElementById(pageId);
     if (targetPage) targetPage.classList.remove('hidden');
     
     const navbar = document.getElementById('navbar');
     if (pageId === 'loginPage' || pageId === 'profileSetupPage') {
-        navbar.classList.add('hidden');
+        navbar?.classList.add('hidden');
     } else {
-        navbar.classList.remove('hidden');
+        navbar?.classList.remove('hidden');
     }
 }
 
@@ -69,7 +71,6 @@ async function initializeAuth() {
     
     try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
         if (error) throw error;
 
         if (session) {
@@ -108,7 +109,7 @@ async function checkUserProfile() {
 }
 
 function prefillProfileForm() {
-    if (currentUser.user_metadata) {
+    if (currentUser?.user_metadata) {
         const nameInput = document.getElementById('nameInput');
         if (nameInput && currentUser.user_metadata.full_name) {
             nameInput.value = currentUser.user_metadata.full_name;
@@ -143,6 +144,7 @@ async function signOut() {
 
 async function loadTrips(filters = {}) {
     try {
+        // We use the 'supabase' variable initialized at the top
         let query = supabase
             .from('trips')
             .select(`
@@ -162,16 +164,7 @@ async function loadTrips(filters = {}) {
         
         let filteredTrips = data || [];
         
-        // Filter: Area
-        if (filters.area_filter) {
-            const search = filters.area_filter.toLowerCase();
-            filteredTrips = filteredTrips.filter(trip => 
-                (trip.start_point && trip.start_point.toLowerCase().includes(search)) ||
-                (trip.destination && trip.destination.toLowerCase().includes(search))
-            );
-        }
-        
-        // Filter: Hide user's own trips from general dashboard
+        // Hide user's own trips from the discovery dashboard
         filteredTrips = filteredTrips.filter(trip => trip.driver_id !== currentUser.id);
         
         allTrips = filteredTrips;
@@ -201,18 +194,16 @@ async function renderDashboard() {
     const container = document.getElementById('tripsContainer');
     const emptyState = document.getElementById('emptyState');
     
+    if (!container) return;
+
     if (!trips || trips.length === 0) {
         container.innerHTML = '';
-        emptyState.classList.remove('hidden');
+        emptyState?.classList.remove('hidden');
     } else {
-        emptyState.classList.add('hidden');
+        emptyState?.classList.add('hidden');
         container.innerHTML = trips.map(trip => renderTripCard(trip)).join('');
     }
 }
-
-// ===================================
-// UI RENDERING & HANDLERS
-// ===================================
 
 function renderTripCard(trip) {
     const isUserJoined = trip.trip_members?.some(m => m.user_id === currentUser.id);
@@ -240,44 +231,15 @@ function renderTripCard(trip) {
     `;
 }
 
-async function handleJoinTrip(tripId) {
-    const { data: trip } = await supabase.from('trips').select('current_passengers, max_passengers').eq('id', tripId).single();
-    if (trip.current_passengers >= trip.max_passengers) return showToast('Trip is full');
-
-    const { error } = await supabase.from('trip_members').insert([{ trip_id: tripId, user_id: currentUser.id, status: 'confirmed' }]);
-    if (error) return showToast('Error joining');
-
-    await supabase.from('trips').update({ current_passengers: trip.current_passengers + 1 }).eq('id', tripId);
-    showToast('Joined successfully!');
-    renderDashboard();
-}
-
-async function saveUserProfile(profileData) {
-    const { data, error } = await supabase
-        .from('users')
-        .upsert([{
-            id: currentUser.id,
-            email: currentUser.email,
-            profile_image_url: currentUser.user_metadata.avatar_url,
-            ...profileData
-        }])
-        .select().single();
-    
-    if (error) {
-        showToast('Failed to save profile');
-        return false;
-    }
-    currentUserProfile = data;
-    return true;
-}
-
 // ===================================
-// INITIALIZATION
+// EVENT LISTENERS & INITIALIZATION
 // ===================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Start the auth process
     initializeAuth();
     
+    // Listen for auth state changes
     supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' && session) {
             currentUser = session.user;
@@ -288,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Event Listeners
+    // UI Listeners
     document.getElementById('googleSignInBtn')?.addEventListener('click', signInWithGoogle);
     document.getElementById('logoutBtn')?.addEventListener('click', signOut);
     document.getElementById('userMenuBtn')?.addEventListener('click', () => {
@@ -304,12 +266,33 @@ document.addEventListener('DOMContentLoaded', () => {
             area: document.getElementById('areaInput').value,
             role: document.getElementById('roleInput').value
         };
-        if (await saveUserProfile(profileData)) {
-            await initializeDashboard();
-            showPage('dashboardPage');
+        
+        const { error } = await supabase
+            .from('users')
+            .upsert([{
+                id: currentUser.id,
+                email: currentUser.email,
+                profile_image_url: currentUser.user_metadata.avatar_url,
+                ...profileData
+            }]);
+            
+        if (!error) {
+            await checkUserProfile();
+        } else {
+            showToast('Error saving profile');
         }
     });
 });
 
-// Globalize functions for HTML onclicks
-window.handleJoinTrip = handleJoinTrip;
+// Make handlers global so HTML onclick can find them
+window.handleJoinTrip = async (tripId) => {
+    const { data: trip } = await supabase.from('trips').select('current_passengers, max_passengers').eq('id', tripId).single();
+    if (trip.current_passengers >= trip.max_passengers) return showToast('Trip is full');
+
+    const { error } = await supabase.from('trip_members').insert([{ trip_id: tripId, user_id: currentUser.id, status: 'confirmed' }]);
+    if (error) return showToast('You already joined or there was an error');
+
+    await supabase.from('trips').update({ current_passengers: (trip.current_passengers || 0) + 1 }).eq('id', tripId);
+    showToast('Joined successfully!');
+    renderDashboard();
+};
