@@ -250,91 +250,297 @@ function applyFilters() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            if (dateFilter === 'today') {
-                const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                if (tripDate < today || tripDate >= tomorrow) return false;
-            } else if (dateFilter === 'tomorrow') {
-                const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                const dayAfter = new Date(tomorrow);
-                dayAfter.setDate(dayAfter.getDate() + 1);
-                if (tripDate < tomorrow || tripDate >= dayAfter) return false;
-            } else if (dateFilter === 'week') {
-                const nextWeek = new Date(today);
-                nextWeek.setDate(nextWeek.getDate() + 7);
-                if (tripDate < today || tripDate > nextWeek) return false;
+            if (dateFilter === 'today' && tripDate.toDateString() !== today.toDateString()) {
+                return false;
+            }
+            if (dateFilter === 'week') {
+                const weekFromNow = new Date(today);
+                weekFromNow.setDate(weekFromNow.getDate() + 7);
+                if (tripDate < today || tripDate > weekFromNow) {
+                    return false;
+                }
             }
         }
 
         return true;
     });
 
-    renderTrips(filteredTrips);
+    renderTrips();
 }
 
-function renderTrips(trips) {
+function renderTrips() {
     const container = document.getElementById('trips-container');
 
-    if (!trips || trips.length === 0) {
+    if (!filteredTrips || filteredTrips.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">🚗</div>
-                <h3>No trips available</h3>
-                <p>Check back later or create your own trip!</p>
+                <p>No trips available</p>
+                <p style="margin-top: 0.5rem; opacity: 0.7;">Try adjusting your filters</p>
             </div>
         `;
         return;
     }
 
-    container.innerHTML = trips.map(t => {
-        const isDriver = t.driver_id === currentUser.id;
-        const isFull = t.current_passengers >= t.max_passengers;
-        const tripDate = new Date(t.trip_date);
-        const formattedDate = tripDate.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-
-        return `
-            <div class="card" onclick="viewTripDetails('${t.id}')">
-                <span class="badge badge-${t.trip_type}">${t.trip_type}</span>
-                <h3>${t.title}</h3>
-                <p>👤 ${t.driver_name}</p>
-                <p>📍 ${t.start_point}</p>
-                <p>🎯 ${t.destination}</p>
-                <p>📅 ${formattedDate}</p>
-                <p>⏰ ${formatTime(t.trip_time)}</p>
-                <p>💺 ${t.current_passengers}/${t.max_passengers} seats</p>
-                ${t.notes ? `<p style="font-style: italic; font-size: 0.85rem;">💬 ${t.notes}</p>` : ''}
-                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                    ${isDriver ?
-                `<button onclick="event.stopPropagation(); editTrip('${t.id}')" class="btn-secondary" style="flex: 1;">Edit</button>
-                         <button onclick="event.stopPropagation(); deleteTrip('${t.id}', '${escapeHtml(t.title)}')" class="btn-danger" style="flex: 1;">Cancel</button>` :
-                `<button onclick="event.stopPropagation(); joinTrip('${t.id}')" class="btn-primary" style="flex: 1;" ${isFull ? 'disabled' : ''}>
-                            ${isFull ? 'Full' : 'Join Trip →'}
-                         </button>`
-            }
+    container.innerHTML = filteredTrips.map(trip => `
+        <div class="trip-card" onclick="viewTripDetails('${trip.id}')">
+            <div class="trip-header">
+                <span class="badge badge-${trip.trip_type}">${trip.trip_type}</span>
+                <span class="badge ${trip.current_passengers >= trip.max_passengers ? 'badge-full' : 'badge-available'}">
+                    ${trip.current_passengers || 0}/${trip.max_passengers} seats
+                </span>
+            </div>
+            <h3 class="trip-title">${escapeHtml(trip.title)}</h3>
+            <div class="trip-info">
+                <div class="info-row">
+                    <span class="icon">👤</span>
+                    <span>Driver: ${escapeHtml(trip.driver_name)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="icon">📍</span>
+                    <span>${escapeHtml(trip.start_point)} → ${escapeHtml(trip.destination)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="icon">📅</span>
+                    <span>${new Date(trip.trip_date).toLocaleDateString()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="icon">⏰</span>
+                    <span>${formatTime(trip.trip_time)}</span>
+                </div>
+                <div class="info-row">
+                    <span class="icon">👥</span>
+                    <span>${trip.gender_filter}</span>
                 </div>
             </div>
-        `;
-    }).join('');
+        </div>
+    `).join('');
 }
 
-// TRIP MANAGEMENT
+// TRIP DETAILS
+async function viewTripDetails(tripId) {
+    showLoading(true);
+
+    // Get trip details with driver info
+    const { data: trip, error: tripError } = await client
+        .from('trips_with_driver')
+        .select('*')
+        .eq('id', tripId)
+        .single();
+
+    if (tripError || !trip) {
+        showToast('Error loading trip details', 'error');
+        showLoading(false);
+        return;
+    }
+
+    // Get trip members
+    const { data: members } = await client
+        .from('trip_members')
+        .select(`
+            id,
+            user_id,
+            status,
+            users (
+                name,
+                phone,
+                gender
+            )
+        `)
+        .eq('trip_id', tripId)
+        .eq('status', 'confirmed');
+
+    // Check if current user is already a member
+    const { data: userMembership } = await client
+        .from('trip_members')
+        .select('id, status')
+        .eq('trip_id', tripId)
+        .eq('user_id', currentUser.id)
+        .eq('status', 'confirmed')
+        .maybeSingle();
+
+    const isDriver = trip.driver_id === currentUser.id;
+    const isMember = !!userMembership;
+    const isFull = (trip.current_passengers || 0) >= trip.max_passengers;
+
+    // Render trip details
+    const detailsContent = document.getElementById('trip-details-content');
+    detailsContent.innerHTML = `
+        <div class="trip-detail-header">
+            <h2>${escapeHtml(trip.title)}</h2>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                <span class="badge badge-${trip.trip_type}">${trip.trip_type}</span>
+                <span class="badge ${isFull ? 'badge-full' : 'badge-available'}">
+                    ${trip.current_passengers || 0}/${trip.max_passengers} seats
+                </span>
+            </div>
+        </div>
+
+        <div class="trip-detail-section">
+            <h3>Trip Information</h3>
+            <div class="info-row">
+                <span class="icon">👤</span>
+                <span><strong>Driver:</strong> ${escapeHtml(trip.driver_name)}</span>
+            </div>
+            <div class="info-row">
+                <span class="icon">📞</span>
+                <span><strong>Phone:</strong> ${escapeHtml(trip.driver_phone)}</span>
+            </div>
+            <div class="info-row">
+                <span class="icon">🚗</span>
+                <span><strong>Vehicle:</strong> ${escapeHtml(trip.driver_car_model || 'N/A')} (${escapeHtml(trip.driver_car_plate || 'N/A')})</span>
+            </div>
+            <div class="info-row">
+                <span class="icon">📍</span>
+                <span><strong>From:</strong> ${escapeHtml(trip.start_point)}</span>
+            </div>
+            <div class="info-row">
+                <span class="icon">🎯</span>
+                <span><strong>To:</strong> ${escapeHtml(trip.destination)}</span>
+            </div>
+            <div class="info-row">
+                <span class="icon">📅</span>
+                <span><strong>Date:</strong> ${new Date(trip.trip_date).toLocaleDateString()}</span>
+            </div>
+            <div class="info-row">
+                <span class="icon">⏰</span>
+                <span><strong>Time:</strong> ${formatTime(trip.trip_time)}</span>
+            </div>
+            <div class="info-row">
+                <span class="icon">👥</span>
+                <span><strong>Gender Filter:</strong> ${trip.gender_filter}</span>
+            </div>
+            ${trip.area_filter ? `
+                <div class="info-row">
+                    <span class="icon">🏘️</span>
+                    <span><strong>Area:</strong> ${escapeHtml(trip.area_filter)}</span>
+                </div>
+            ` : ''}
+            ${trip.notes ? `
+                <div class="info-row">
+                    <span class="icon">📝</span>
+                    <span><strong>Notes:</strong> ${escapeHtml(trip.notes)}</span>
+                </div>
+            ` : ''}
+        </div>
+
+        ${members && members.length > 0 ? `
+            <div class="trip-detail-section">
+                <h3>Passengers (${members.length})</h3>
+                ${members.map(m => `
+                    <div class="passenger-item">
+                        <span>👤 ${escapeHtml(m.users?.name || 'Unknown')}</span>
+                        <span class="badge">${m.users?.gender || 'N/A'}</span>
+                    </div>
+                `).join('')}
+            </div>
+        ` : ''}
+
+        <div class="modal-actions" style="margin-top: 1.5rem;">
+            ${!isDriver && !isMember && !isFull ? `
+                <button onclick="joinTrip('${tripId}')" class="btn-primary">Join Trip</button>
+            ` : ''}
+            ${!isDriver && isMember ? `
+                <button onclick="cancelTrip('${tripId}', '${userMembership.id}')" class="btn-danger">Cancel Trip</button>
+            ` : ''}
+            ${isDriver ? `
+                <div style="display: flex; gap: 0.5rem;">
+                    <button onclick="editTrip('${tripId}')" class="btn-secondary" style="flex: 1;">Edit Trip</button>
+                    <button onclick="deleteTrip('${tripId}')" class="btn-danger" style="flex: 1;">Delete Trip</button>
+                </div>
+            ` : ''}
+            <button onclick="closeModal()" class="btn-secondary">Close</button>
+        </div>
+    `;
+
+    showLoading(false);
+    showView('trip-details-modal');
+}
+
+// TRIP ACTIONS
+async function joinTrip(tripId) {
+    if (!confirm('Join this trip?')) return;
+
+    showLoading(true);
+
+    const { error } = await client
+        .from('trip_members')
+        .insert({
+            trip_id: tripId,
+            user_id: currentUser.id,
+            status: 'confirmed'
+        });
+
+    if (error) {
+        showToast('Error joining trip: ' + error.message, 'error');
+    } else {
+        showToast('Successfully joined trip!', 'success');
+        await loadDashboardData(currentUser.id);
+        closeModal();
+    }
+
+    showLoading(false);
+}
+
+async function cancelTrip(tripId, membershipId) {
+    if (!confirm('Are you sure you want to cancel this trip?')) return;
+
+    showLoading(true);
+
+    const { error } = await client
+        .from('trip_members')
+        .delete()
+        .eq('id', membershipId);
+
+    if (error) {
+        showToast('Error canceling trip: ' + error.message, 'error');
+    } else {
+        showToast('Trip canceled successfully', 'success');
+        await loadDashboardData(currentUser.id);
+        closeModal();
+    }
+
+    showLoading(false);
+}
+
+// TRIP CREATION & EDITING
 function openTripModal() {
-    document.getElementById('modal-title').innerText = 'Create Trip';
     document.getElementById('trip-form').reset();
-    document.getElementById('t-id').value = '';
+    document.getElementById('trip-id').value = '';
+    document.getElementById('modal-title').innerText = 'Create New Trip';
+    showView('trip-modal');
+}
 
-    // Set minimum date to today
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('t-date').min = today;
+async function editTrip(tripId) {
+    showLoading(true);
 
-    // Set default gender filter
-    document.getElementById('t-gender').value = 'Mixed';
+    const { data: trip, error } = await client
+        .from('trips')
+        .select('*')
+        .eq('id', tripId)
+        .single();
 
+    if (error || !trip) {
+        showToast('Error loading trip', 'error');
+        showLoading(false);
+        return;
+    }
+
+    // Populate form
+    document.getElementById('trip-id').value = trip.id;
+    document.getElementById('trip-title').value = trip.title;
+    document.getElementById('trip-start').value = trip.start_point;
+    document.getElementById('trip-dest').value = trip.destination;
+    document.getElementById('trip-date').value = trip.trip_date;
+    document.getElementById('trip-time').value = trip.trip_time;
+    document.getElementById('trip-type').value = trip.trip_type;
+    document.getElementById('trip-gender').value = trip.gender_filter;
+    document.getElementById('trip-area').value = trip.area_filter || '';
+    document.getElementById('trip-max-pass').value = trip.max_passengers;
+    document.getElementById('trip-notes').value = trip.notes || '';
+
+    document.getElementById('modal-title').innerText = 'Edit Trip';
+    showLoading(false);
     showView('trip-modal');
 }
 
@@ -342,17 +548,18 @@ async function saveTrip(event) {
     event.preventDefault();
     showLoading(true);
 
-    const tripId = document.getElementById('t-id').value;
+    const tripId = document.getElementById('trip-id').value;
     const tripData = {
-        title: document.getElementById('t-title').value,
-        start_point: document.getElementById('t-start').value,
-        destination: document.getElementById('t-dest').value,
-        trip_date: document.getElementById('t-date').value,
-        trip_time: document.getElementById('t-time').value,
-        trip_type: document.getElementById('t-type').value,
-        gender_filter: document.getElementById('t-gender').value,
-        max_passengers: parseInt(document.getElementById('t-seats').value),
-        notes: document.getElementById('t-notes').value || null
+        title: document.getElementById('trip-title').value,
+        start_point: document.getElementById('trip-start').value,
+        destination: document.getElementById('trip-dest').value,
+        trip_date: document.getElementById('trip-date').value,
+        trip_time: document.getElementById('trip-time').value,
+        trip_type: document.getElementById('trip-type').value,
+        gender_filter: document.getElementById('trip-gender').value,
+        area_filter: document.getElementById('trip-area').value || null,
+        max_passengers: parseInt(document.getElementById('trip-max-pass').value),
+        notes: document.getElementById('trip-notes').value || null
     };
 
     let error;
@@ -371,236 +578,70 @@ async function saveTrip(event) {
             .insert(tripData));
     }
 
-    showLoading(false);
-
     if (error) {
         showToast('Error saving trip: ' + error.message, 'error');
+        showLoading(false);
     } else {
-        showToast(tripId ? 'Trip updated successfully!' : 'Trip created successfully!', 'success');
-        closeModal();
+        showToast(tripId ? 'Trip updated!' : 'Trip created!', 'success');
         await loadDashboardData(currentUser.id);
+        closeModal();
+        showLoading(false);
     }
 }
 
-async function editTrip(tripId) {
-    const { data: trip, error } = await client
-        .from('trips')
-        .select('*')
-        .eq('id', tripId)
-        .single();
-
-    if (error || !trip) {
-        showToast('Error loading trip details', 'error');
+async function deleteTrip(tripId) {
+    if (!confirm('Are you sure you want to delete this trip? This action cannot be undone.')) {
         return;
     }
 
-    // Populate form
-    document.getElementById('modal-title').innerText = 'Edit Trip';
-    document.getElementById('t-id').value = trip.id;
-    document.getElementById('t-title').value = trip.title;
-    document.getElementById('t-start').value = trip.start_point;
-    document.getElementById('t-dest').value = trip.destination;
-    document.getElementById('t-date').value = trip.trip_date;
-    document.getElementById('t-time').value = trip.trip_time;
-    document.getElementById('t-type').value = trip.trip_type;
-    document.getElementById('t-gender').value = trip.gender_filter;
-    document.getElementById('t-seats').value = trip.max_passengers;
-    document.getElementById('t-notes').value = trip.notes || '';
-
-    showView('trip-modal');
-}
-
-async function joinTrip(tripId) {
     showLoading(true);
 
-    // We only need to insert. The SQL Triggers handle the 
-    // capacity check, gender check, and passenger increment.
-    const { error } = await client
-        .from('trip_members')
-        .insert({
-            trip_id: tripId,
-            user_id: currentUser.id,
-            status: 'confirmed'
-        });
-
-    showLoading(false);
-
-    if (error) {
-        // This will now catch "Trip is full" OR "Gender mismatch" from the DB
-        showToast(error.message, 'error');
-    } else {
-        showToast('Joined trip successfully!', 'success');
-        await loadDashboardData(currentUser.id);
-    }
-}
-
-async function deleteTrip(tripId, title) {
-    if (!confirm(`Cancel trip: ${title}?\n\nPassengers will be notified.`)) return;
-
-    showLoading(true);
-
-    // Get trip members to notify
-    const { data: members } = await client
-        .from('trip_members')
-        .select('user_id')
-        .eq('trip_id', tripId);
-
-    if (members && members.length > 0) {
-        const notifications = members.map(m => ({
-            user_id: m.user_id,
-            type: 'trip_cancelled',
-            title: 'Trip Cancelled',
-            message: `The trip "${title}" was cancelled by the driver.`,
-            related_trip_id: tripId
-        }));
-
-        await client.from('notifications').insert(notifications);
-    }
-
-    // Deactivate trip instead of deleting
     const { error } = await client
         .from('trips')
         .update({ is_active: false })
         .eq('id', tripId);
 
-    showLoading(false);
-
     if (error) {
-        showToast('Error cancelling trip', 'error');
+        showToast('Error deleting trip: ' + error.message, 'error');
     } else {
-        showToast('Trip cancelled successfully', 'success');
+        showToast('Trip deleted successfully', 'success');
         await loadDashboardData(currentUser.id);
+        closeModal();
     }
-}
-
-async function viewTripDetails(tripId) {
-    showLoading(true);
-
-    const { data: trip, error } = await client
-        .from('trips_with_driver')
-        .select('*')
-        .eq('id', tripId)
-        .single();
-
-    if (error || !trip) {
-        showLoading(false);
-        showToast('Error loading trip details', 'error');
-        return;
-    }
-
-    // Get trip members
-    const { data: members } = await client
-        .from('trip_members_detailed')
-        .select('*')
-        .eq('trip_id', tripId);
 
     showLoading(false);
-
-    const tripDate = new Date(trip.trip_date);
-    const formattedDate = tripDate.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-
-    const content = document.getElementById('trip-details-content');
-    content.innerHTML = `
-        <div style="padding: 2rem;">
-            <div class="badge badge-${trip.trip_type}" style="margin-bottom: 1rem;">${trip.trip_type}</div>
-            <h2 style="font-size: 1.75rem; margin-bottom: 1.5rem; font-family: 'Outfit', sans-serif;">${trip.title}</h2>
-            
-            <div style="display: grid; gap: 1.5rem; margin-bottom: 2rem;">
-                <div>
-                    <h4 style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Driver</h4>
-                    <p style="font-size: 1.1rem; font-weight: 600;">👤 ${trip.driver_name}</p>
-                    ${trip.driver_phone ? `<p style="font-size: 0.95rem; color: var(--text-secondary);">📞 ${trip.driver_phone}</p>` : ''}
-                    ${trip.car_model ? `<p style="font-size: 0.95rem; color: var(--text-secondary);">🚗 ${trip.car_model} (${trip.car_plate})</p>` : ''}
-                </div>
-                
-                <div>
-                    <h4 style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Route</h4>
-                    <p style="font-size: 1rem;">📍 From: <strong>${trip.start_point}</strong></p>
-                    <p style="font-size: 1rem;">🎯 To: <strong>${trip.destination}</strong></p>
-                </div>
-                
-                <div>
-                    <h4 style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Schedule</h4>
-                    <p style="font-size: 1rem;">📅 ${formattedDate}</p>
-                    <p style="font-size: 1rem;">⏰ ${formatTime(trip.trip_time)}</p>
-                </div>
-                
-                <div>
-                    <h4 style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Capacity</h4>
-                    <p style="font-size: 1rem;">💺 ${trip.current_passengers} / ${trip.max_passengers} seats filled</p>
-                    <p style="font-size: 0.9rem; color: var(--text-secondary);">Gender: ${trip.gender_filter}</p>
-                </div>
-                
-                ${trip.notes ? `
-                    <div>
-                        <h4 style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.25rem;">Notes</h4>
-                        <p style="font-size: 0.95rem; font-style: italic; color: var(--text-secondary);">${trip.notes}</p>
-                    </div>
-                ` : ''}
-            </div>
-            
-            ${members && members.length > 0 ? `
-                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid var(--border-color);">
-                    <h3 style="font-size: 1.25rem; margin-bottom: 1rem; font-family: 'Outfit', sans-serif;">Passengers (${members.length})</h3>
-                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                        ${members.map(m => `
-                            <div style="background: var(--bg-accent); padding: 1rem; border-radius: var(--radius-md);">
-                                <p style="font-weight: 600; margin-bottom: 0.25rem;">👤 ${m.passenger_name}</p>
-                                <p style="font-size: 0.9rem; color: var(--text-secondary);">📞 ${m.passenger_phone}</p>
-                                ${m.pickup_point ? `<p style="font-size: 0.9rem; color: var(--text-secondary);">📍 ${m.pickup_point}</p>` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            ` : ''}
-            
-            <button onclick="closeTripDetails()" class="btn-outline btn-full" style="margin-top: 2rem;">Close</button>
-        </div>
-    `;
-
-    showView('trip-details-modal');
-}
-
-function closeTripDetails() {
-    showView('dashboard-view');
 }
 
 // MY TRIPS
-async function showMyTrips() {
+async function openMyTrips() {
     showLoading(true);
 
-    // Load joined trips
-    const { data: joinedTrips } = await client
+    // Get trips user has joined
+    const { data: joined } = await client
         .from('trip_members')
-        .select('trip_id, trips_with_driver(*)')
+        .select(`
+            *,
+            trips_with_driver (*)
+        `)
         .eq('user_id', currentUser.id)
-        .eq('status', 'confirmed');
+        .eq('status', 'confirmed')
+        .order('joined_at', { ascending: false });
 
-    // Load driving trips
-    const { data: drivingTrips } = await client
-        .from('trips_with_driver')
+    // Get trips user is driving
+    const { data: driving } = await client
+        .from('trips')
         .select('*')
         .eq('driver_id', currentUser.id)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .order('trip_date', { ascending: true })
+        .order('trip_time', { ascending: true });
 
-    showLoading(false);
-
-    renderMyTrips(joinedTrips, drivingTrips);
-    showView('my-trips-modal');
-}
-
-function renderMyTrips(joined, driving) {
     // Render joined trips
     const joinedList = document.getElementById('joined-trips-list');
     if (!joined || joined.length === 0) {
         joinedList.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">🎫</div>
+                <div class="empty-icon">🚙</div>
                 <p>You haven't joined any trips yet</p>
             </div>
         `;
@@ -633,7 +674,7 @@ function renderMyTrips(joined, driving) {
                 <h3>${t.title}</h3>
                 <p>📍 ${t.start_point} → ${t.destination}</p>
                 <p>📅 ${new Date(t.trip_date).toLocaleDateString()} | ⏰ ${formatTime(t.trip_time)}</p>
-                <p>💺 ${t.current_passengers}/${t.max_passengers} seats filled</p>
+                <p>💺 ${t.current_passengers || 0}/${t.max_passengers} seats filled</p>
                 <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                     <button onclick="viewTripDetails('${t.id}')" class="btn-primary" style="flex: 1;">View Details</button>
                     <button onclick="editTrip('${t.id}'); closeMyTrips();" class="btn-secondary" style="flex: 1;">Edit</button>
@@ -641,6 +682,9 @@ function renderMyTrips(joined, driving) {
             </div>
         `).join('');
     }
+
+    showLoading(false);
+    showView('my-trips-modal');
 }
 
 function switchTab(tab) {
@@ -747,6 +791,15 @@ function setupRealtimeSubscriptions(userId) {
         .channel('trips-changes')
         .on('postgres_changes',
             { event: '*', schema: 'public', table: 'trips' },
+            () => loadDashboardData(userId)
+        )
+        .subscribe();
+
+    // Subscribe to trip_members changes to update passenger counts in real-time
+    client
+        .channel('trip-members-changes')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'trip_members' },
             () => loadDashboardData(userId)
         )
         .subscribe();
