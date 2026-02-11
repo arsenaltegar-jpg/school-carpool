@@ -1,453 +1,93 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Carpool - Safe Rides for Students</title>
-
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Supabase Client -->
+    <title>School Carpool | Safe Rides</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-
-    <style>
-        * {
-            font-family: 'Inter', sans-serif;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Poppins', sans-serif;
-        }
-
-        .gradient-bg {
-            background: linear-gradient(135deg, #3B82F6 0%, #10B981 100%);
-        }
-
-        .card-shadow {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        .btn-primary {
-            background-color: #3B82F6;
-            transition: all 0.3s ease;
-        }
-
-            .btn-primary:hover {
-                background-color: #2563EB;
-                transform: translateY(-2px);
-                box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
-            }
-
-        .btn-secondary {
-            background-color: #10B981;
-            transition: all 0.3s ease;
-        }
-
-            .btn-secondary:hover {
-                background-color: #059669;
-                transform: translateY(-2px);
-            }
-
-        .trip-card {
-            transition: all 0.3s ease;
-        }
-
-            .trip-card:hover {
-                transform: translateY(-4px);
-                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            }
-
-        .loading-spinner {
-            border: 3px solid #f3f4f6;
-            border-top: 3px solid #3B82F6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .badge-blue {
-            background-color: #DBEAFE;
-            color: #1E40AF;
-        }
-
-        .badge-green {
-            background-color: #D1FAE5;
-            color: #065F46;
-        }
-
-        .badge-orange {
-            background-color: #FEF3C7;
-            color: #92400E;
-        }
-
-        .badge-pink {
-            background-color: #FCE7F3;
-            color: #9F1239;
-        }
-    </style>
 </head>
-<body class="bg-gray-50">
-
-    <!-- Navigation -->
-    <nav id="navbar" class="bg-white shadow-md sticky top-0 z-50 hidden">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center">
-                    <i class="fas fa-car text-blue-500 text-2xl mr-2"></i>
-                    <span class="text-xl font-bold text-gray-800">School Carpool</span>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <button id="notificationBtn" class="relative p-2 text-gray-600 hover:text-blue-500 transition">
-                        <i class="fas fa-bell text-xl"></i>
-                        <span id="notificationBadge" class="hidden absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">0</span>
-                    </button>
-                    <div class="relative">
-                        <button id="userMenuBtn" class="flex items-center space-x-2 focus:outline-none">
-                            <img id="userAvatar" src="" alt="User" class="w-8 h-8 rounded-full border-2 border-blue-500">
-                            <i class="fas fa-chevron-down text-gray-600"></i>
-                        </button>
-                        <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2">
-                            <a href="#" id="viewProfile" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                                <i class="fas fa-user mr-2"></i>My Profile
-                            </a>
-                            <a href="#" id="myTripsLink" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                                <i class="fas fa-route mr-2"></i>My Trips
-                            </a>
-                            <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600 hover:bg-gray-100">
-                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Container -->
-    <div id="app" class="min-h-screen">
-
-        <!-- Loading Screen -->
-        <div id="loadingScreen" class="flex items-center justify-center min-h-screen">
-            <div class="text-center">
-                <div class="loading-spinner mx-auto mb-4"></div>
-                <p class="text-gray-600">Loading...</p>
-            </div>
+<body>
+    <div class="container">
+        <div id="auth-view" class="hidden" style="text-align: center; padding-top: 100px;">
+            <h1>🚗 School Carpool</h1>
+            <p>Connect with other parents for safer student commutes.</p>
+            <button onclick="signIn()" class="btn-primary" style="width: auto; padding: 15px 40px;">Sign in with Google</button>
         </div>
 
-        <!-- Login Page -->
-        <div id="loginPage" class="hidden">
-            <div class="min-h-screen flex items-center justify-center px-4 gradient-bg">
-                <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
-                    <div class="text-center mb-8">
-                        <i class="fas fa-car text-blue-500 text-6xl mb-4"></i>
-                        <h1 class="text-3xl font-bold text-gray-800 mb-2">School Carpool</h1>
-                        <p class="text-gray-600">Safe, convenient rides for students</p>
-                    </div>
-
-                    <div class="space-y-4">
-                        <button id="googleSignInBtn" class="w-full bg-white border-2 border-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 transition flex items-center justify-center space-x-3">
-                            <svg class="w-6 h-6" viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                            </svg>
-                            <span>Sign in with Google</span>
-                        </button>
-
-                        <div class="mt-6 text-center text-sm text-gray-600">
-                            <p>✓ Secure & trusted</p>
-                            <p>✓ No passwords needed</p>
-                            <p>✓ Quick one-click login</p>
-                        </div>
-                    </div>
+        <div id="dashboard-view" class="hidden">
+            <header>
+                <div>
+                    <h1>School Carpool</h1>
+                    <p>Safe rides for students</p>
                 </div>
+                <button onclick="signOut()" class="btn-outline">Sign Out</button>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card green"><h3>Available Trips</h3><p id="stat-avail">0</p></div>
+                <div class="stat-card blue"><h3>My Rides</h3><p id="stat-rides">0</p></div>
+                <div class="stat-card purple"><h3>Driving</h3><p id="stat-driving">0</p></div>
+                <div class="stat-card orange"><h3>Total Trips</h3><p id="stat-total">0</p></div>
             </div>
-        </div>
 
-        <!-- Profile Setup Page -->
-        <div id="profileSetupPage" class="hidden">
-            <div class="min-h-screen bg-gray-50 py-12 px-4">
-                <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Complete Your Profile</h2>
-
-                    <form id="profileForm" class="space-y-6">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
-                            <input type="text" id="nameInput" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your full name">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
-                            <input type="tel" id="phoneInput" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="+60 12-345 6789">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Gender *</label>
-                            <select id="genderInput" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="">Select gender</option>
-                                <option value="Lelaki">Lelaki (Male)</option>
-                                <option value="Perempuan">Perempuan (Female)</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Area/Region *</label>
-                            <input type="text" id="areaInput" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., Petaling Jaya, Subang Jaya">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Role *</label>
-                            <select id="roleInput" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="">Select your role</option>
-                                <option value="Driver">Driver (I can drive students)</option>
-                                <option value="Passenger">Passenger (I need rides)</option>
-                                <option value="Both">Both (Driver & Passenger)</option>
-                            </select>
-                        </div>
-
-                        <div id="driverFields" class="hidden space-y-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Available Seats</label>
-                                <input type="number" id="seatsInput" min="1" max="7" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 3">
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Car Model</label>
-                                <input type="text" id="carModelInput" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., Toyota Camry">
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Car Plate Number</label>
-                                <input type="text" id="carPlateInput" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., ABC 1234">
-                            </div>
-                        </div>
-
-                        <button type="submit" class="w-full btn-primary text-white font-semibold py-3 px-6 rounded-lg">
-                            Complete Profile
-                        </button>
-                    </form>
-                </div>
+            <div id="driver-actions" class="hidden" style="margin-bottom: 20px;">
+                <button onclick="openTripModal()" class="purple" style="color:white">+ Create New Trip</button>
             </div>
+
+            <h2>Available Trips</h2>
+            <div id="trips-container" class="trips-grid"></div>
         </div>
-
-        <!-- Dashboard Page -->
-        <div id="dashboardPage" class="hidden">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-                <!-- Header -->
-                <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-gray-800 mb-2">Available Trips</h1>
-                    <p class="text-gray-600">Find and join carpool rides in your area</p>
-                </div>
-
-                <!-- Filter Bar -->
-                <div class="bg-white rounded-xl shadow-md p-6 mb-8">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Trip Type</label>
-                            <select id="filterTripType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <option value="">All</option>
-                                <option value="morning">Morning</option>
-                                <option value="afternoon">Afternoon</option>
-                                <option value="both">Both</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Gender</label>
-                            <select id="filterGender" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <option value="">All</option>
-                                <option value="Lelaki">Lelaki</option>
-                                <option value="Perempuan">Perempuan</option>
-                                <option value="Mixed">Mixed</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Area</label>
-                            <input type="text" id="filterArea" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Search area...">
-                        </div>
-
-                        <div class="flex items-end">
-                            <button id="applyFiltersBtn" class="w-full btn-primary text-white font-semibold py-2 px-6 rounded-lg">
-                                Apply Filters
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Create Trip Button (Drivers Only) -->
-                <div id="createTripBtnContainer" class="hidden mb-6">
-                    <button id="createTripBtn" class="btn-secondary text-white font-semibold py-3 px-6 rounded-lg flex items-center">
-                        <i class="fas fa-plus mr-2"></i>
-                        Create New Trip
-                    </button>
-                </div>
-
-                <!-- Trips Grid -->
-                <div id="tripsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Trip cards will be inserted here -->
-                </div>
-
-                <!-- Empty State -->
-                <div id="emptyState" class="hidden text-center py-12">
-                    <i class="fas fa-car text-gray-300 text-6xl mb-4"></i>
-                    <h3 class="text-xl font-semibold text-gray-600 mb-2">No trips available</h3>
-                    <p class="text-gray-500">Check back later or create your own trip</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Create Trip Modal -->
-        <div id="createTripModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold text-gray-800">Create New Trip</h2>
-                        <button id="closeTripModal" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-times text-2xl"></i>
-                        </button>
-                    </div>
-
-                    <form id="createTripForm" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Trip Title *</label>
-                            <input type="text" id="tripTitle" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., Morning School Run">
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Start Point *</label>
-                                <input type="text" id="startPoint" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., SS2, Petaling Jaya">
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Destination *</label>
-                                <input type="text" id="destination" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., SK Petaling Jaya">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
-                                <input type="date" id="tripDate" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Time *</label>
-                                <input type="time" id="tripTime" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Trip Type *</label>
-                            <select id="tripType" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <option value="morning">Morning</option>
-                                <option value="afternoon">Afternoon</option>
-                                <option value="both">Both</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Gender Preference *</label>
-                            <select id="genderFilter" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <option value="Mixed">Mixed (All genders)</option>
-                                <option value="Lelaki">Lelaki only</option>
-                                <option value="Perempuan">Perempuan only</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Max Passengers *</label>
-                            <input type="number" id="maxPassengers" required min="1" max="7" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., 3">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Notes (Optional)</label>
-                            <textarea id="tripNotes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Any additional information..."></textarea>
-                        </div>
-
-                        <button type="submit" class="w-full btn-primary text-white font-semibold py-3 px-6 rounded-lg">
-                            Create Trip
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- My Trips Page -->
-        <div id="myTripsPage" class="hidden">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div class="mb-8">
-                    <button id="backToDashboard" class="text-blue-500 hover:text-blue-600 mb-4">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-                    </button>
-                    <h1 class="text-3xl font-bold text-gray-800 mb-2">My Trips</h1>
-                </div>
-
-                <!-- Tabs -->
-                <div class="mb-6 border-b border-gray-200">
-                    <nav class="-mb-px flex space-x-8">
-                        <button id="tabAsDriver" class="tab-btn border-b-2 border-blue-500 py-4 px-1 text-blue-600 font-semibold">
-                            As Driver
-                        </button>
-                        <button id="tabAsPassenger" class="tab-btn border-b-2 border-transparent py-4 px-1 text-gray-500 hover:text-gray-700">
-                            As Passenger
-                        </button>
-                    </nav>
-                </div>
-
-                <div id="driverTripsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Driver trips will be inserted here -->
-                </div>
-
-                <div id="passengerTripsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Passenger trips will be inserted here -->
-                </div>
-            </div>
-        </div>
-
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="hidden fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-        <p id="toastMessage"></p>
+    <div id="profile-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Complete Your Profile</h2>
+            <form id="profile-form">
+                <label>Full Name</label>
+                <input type="text" id="p-name" required>
+                <label>Phone Number</label>
+                <input type="tel" id="p-phone" placeholder="+60..." required>
+                <label>Gender</label>
+                <select id="p-gender" required>
+                    <option value="Lelaki">Lelaki</option>
+                    <option value="Perempuan">Perempuan</option>
+                </select>
+                <label>Role</label>
+                <select id="p-role" required>
+                    <option value="Passenger">Passenger (Find Rides)</option>
+                    <option value="Driver">Driver (Offer Rides)</option>
+                    <option value="Both">Both</option>
+                </select>
+                <label>Home Area</label>
+                <input type="text" id="p-area" placeholder="e.g., Bandar Baru Bangi" required>
+                <button type="submit" class="btn-primary">Save Profile</button>
+            </form>
+        </div>
     </div>
 
-    <!-- Main Application Script -->
-    <script src="js/app.js"></script>
+    <div id="trip-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="modal-title">Create Trip</h2>
+            <form id="trip-form">
+                <input type="hidden" id="t-id">
+                <input type="text" id="t-title" placeholder="Trip Title" required>
+                <input type="text" id="t-start" placeholder="Pickup Point" required>
+                <input type="text" id="t-dest" placeholder="Destination School" required>
+                <div style="display: flex; gap: 10px;">
+                    <input type="date" id="t-date" required>
+                    <input type="time" id="t-time" required>
+                </div>
+                <select id="t-type">
+                    <option value="morning">Morning</option>
+                    <option value="afternoon">Afternoon</option>
+                </select>
+                <input type="number" id="t-seats" placeholder="Seats Available" min="1" required>
+                <button type="submit" class="btn-primary">Confirm Trip</button>
+                <button type="button" onclick="closeModal()" class="btn-outline" style="width:100%; margin-top:10px;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
