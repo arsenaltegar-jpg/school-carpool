@@ -81,7 +81,7 @@
     const openModal = (html) => { document.getElementById('modal-content').innerHTML=html; document.getElementById('modal').classList.remove('hidden'); document.getElementById('modal').classList.add('flex'); };
 
     btnSignin.onclick = async () => {
-      await sbApp.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+      await sbApp.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: "https://arsenaltegar-jpg.github.io/school-carpool" } });
     };
 
     btnSignout.onclick = async () => {
@@ -254,3 +254,4 @@
   </script>
 </body>
 </html>
+
