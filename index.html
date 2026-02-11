@@ -3,385 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Carpool - Safe Rides Together</title>
-    
+    <title>School Carpool - Safe Rides for Students</title>
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
+
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Google Fonts - Unique Typography -->
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+
     <style>
-        :root {
-            --primary: #FF6B35;
-            --primary-dark: #E55A2B;
-            --secondary: #004E89;
-            --accent: #FFD23F;
-            --success: #06D6A0;
-            --surface: #FFFFFF;
-            --surface-hover: #F8F9FA;
-            --text-primary: #1A1A2E;
-            --text-secondary: #6B7280;
-            --border: #E5E7EB;
-        }
-        
         * {
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
         }
-        
-        h1, h2, h3, h4, h5, h6, .heading-font {
-            font-family: 'Outfit', sans-serif;
-            letter-spacing: -0.02em;
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Poppins', sans-serif;
         }
-        
-        body {
-            background: linear-gradient(180deg, #F9FAFB 0%, #FFFFFF 100%);
-            min-height: 100vh;
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #3B82F6 0%, #10B981 100%);
         }
-        
-        /* Animations */
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        @keyframes pulse-soft {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        .animate-slide-up {
-            animation: slideUp 0.5s ease-out;
-        }
-        
-        .animate-fade-in {
-            animation: fadeIn 0.4s ease-out;
-        }
-        
-        .stagger-1 { animation-delay: 0.1s; }
-        .stagger-2 { animation-delay: 0.2s; }
-        .stagger-3 { animation-delay: 0.3s; }
-        
-        /* Custom Components */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-        }
-        
-        .trip-card {
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-left: 4px solid var(--primary);
-        }
-        
-        .trip-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, rgba(255, 107, 53, 0.03) 0%, rgba(0, 78, 137, 0.03) 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .trip-card:hover::before {
-            opacity: 1;
-        }
-        
-        .trip-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-        }
-        
+
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            font-weight: 600;
+            background-color: #3B82F6;
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
         }
-        
-        .btn-primary::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-        
-        .btn-primary:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
-        }
-        
+
+            .btn-primary:hover {
+                background-color: #2563EB;
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+            }
+
         .btn-secondary {
-            background: var(--secondary);
-            color: white;
-            font-weight: 600;
+            background-color: #10B981;
             transition: all 0.3s ease;
         }
-        
-        .btn-secondary:hover {
-            background: #003A6B;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 78, 137, 0.3);
-        }
-        
-        .btn-outline {
-            border: 2px solid var(--primary);
-            color: var(--primary);
-            background: transparent;
-            font-weight: 600;
+
+            .btn-secondary:hover {
+                background-color: #059669;
+                transform: translateY(-2px);
+            }
+
+        .trip-card {
             transition: all 0.3s ease;
         }
-        
-        .btn-outline:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-        }
-        
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.375rem 0.75rem;
-            border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            letter-spacing: 0.025em;
-        }
-        
-        .badge-orange {
-            background: linear-gradient(135deg, #FFE5D9 0%, #FFD6C7 100%);
-            color: #C75000;
-        }
-        
-        .badge-blue {
-            background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
-            color: #1E3A8A;
-        }
-        
-        .badge-green {
-            background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
-            color: #065F46;
-        }
-        
-        .badge-purple {
-            background: linear-gradient(135deg, #E9D5FF 0%, #DDD6FE 100%);
-            color: #6B21A8;
-        }
-        
-        /* Loading Spinner */
+
+            .trip-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            }
+
         .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid rgba(255, 107, 53, 0.1);
-            border-top: 4px solid var(--primary);
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #3B82F6;
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Floating Action Button */
-        .fab {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 40;
-        }
-        
-        .fab:hover {
-            transform: scale(1.1) rotate(90deg);
-            box-shadow: 0 12px 32px rgba(255, 107, 53, 0.5);
-        }
-        
-        .fab:active {
-            transform: scale(0.95) rotate(90deg);
-        }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #F3F4F6;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary-dark);
-        }
-        
-        /* Mobile Optimizations */
-        @media (max-width: 640px) {
-            .trip-card {
-                border-left-width: 3px;
+            0% {
+                transform: rotate(0deg);
             }
-            
-            .fab {
-                width: 56px;
-                height: 56px;
-                bottom: 20px;
-                right: 20px;
-                font-size: 20px;
+
+            100% {
+                transform: rotate(360deg);
             }
         }
-        
-        /* Modal Backdrop */
-        .modal-backdrop {
-            backdrop-filter: blur(8px);
-            background: rgba(0, 0, 0, 0.4);
-        }
-        
-        /* Input Focus States */
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
-        }
-        
-        /* Navbar Shadow */
-        .nav-shadow {
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-        }
-        
-        /* Empty State */
-        .empty-state-icon {
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        /* Utility Classes */
+
         .hidden {
             display: none !important;
         }
-        
-        /* Gradient Text */
-        .gradient-text {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        /* Avatar Ring */
-        .avatar-ring {
-            padding: 3px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            border-radius: 50%;
-        }
-        
-        /* Tag Pills */
-        .tag-pill {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.625rem;
-            background: rgba(255, 107, 53, 0.08);
-            color: var(--primary);
-            border-radius: 6px;
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
             font-size: 0.75rem;
-            font-weight: 500;
+            font-weight: 600;
+        }
+
+        .badge-blue {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .badge-green {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+
+        .badge-orange {
+            background-color: #FEF3C7;
+            color: #92400E;
+        }
+
+        .badge-pink {
+            background-color: #FCE7F3;
+            color: #9F1239;
         }
     </style>
 </head>
-<body>
-    
+<body class="bg-gray-50">
+
     <!-- Navigation -->
-    <nav id="navbar" class="bg-white nav-shadow sticky top-0 z-50 hidden">
+    <nav id="navbar" class="bg-white shadow-md sticky top-0 z-50 hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
-                        <i class="fas fa-car text-white text-lg"></i>
-                    </div>
-                    <span class="text-xl heading-font font-bold text-gray-800">Carpool</span>
+                <div class="flex items-center">
+                    <i class="fas fa-car text-blue-500 text-2xl mr-2"></i>
+                    <span class="text-xl font-bold text-gray-800">School Carpool</span>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <button id="notificationBtn" class="relative p-2 text-gray-600 hover:text-orange-500 transition-colors">
+                <div class="flex items-center space-x-4">
+                    <button id="notificationBtn" class="relative p-2 text-gray-600 hover:text-blue-500 transition">
                         <i class="fas fa-bell text-xl"></i>
-                        <span id="notificationBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center font-semibold">0</span>
+                        <span id="notificationBadge" class="hidden absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">0</span>
                     </button>
                     <div class="relative">
-                        <button id="userMenuBtn" class="flex items-center space-x-2 focus:outline-none group">
-                            <div class="avatar-ring">
-                                <img id="userAvatar" src="" alt="User" class="w-9 h-9 rounded-full object-cover">
-                            </div>
-                            <i class="fas fa-chevron-down text-gray-600 text-sm group-hover:text-orange-500 transition-colors"></i>
+                        <button id="userMenuBtn" class="flex items-center space-x-2 focus:outline-none">
+                            <img id="userAvatar" src="" alt="User" class="w-8 h-8 rounded-full border-2 border-blue-500">
+                            <i class="fas fa-chevron-down text-gray-600"></i>
                         </button>
-                        <div id="userDropdown" class="hidden absolute right-0 mt-3 w-52 bg-white rounded-2xl shadow-xl py-2 border border-gray-100">
-                            <a href="#" id="viewProfile" class="flex items-center px-4 py-3 text-gray-700 hover:bg-orange-50 transition-colors group">
-                                <i class="fas fa-user mr-3 text-gray-400 group-hover:text-orange-500"></i>
-                                <span class="font-medium">My Profile</span>
+                        <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2">
+                            <a href="#" id="viewProfile" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-user mr-2"></i>My Profile
                             </a>
-                            <a href="#" id="myTripsLink" class="flex items-center px-4 py-3 text-gray-700 hover:bg-orange-50 transition-colors group">
-                                <i class="fas fa-route mr-3 text-gray-400 group-hover:text-orange-500"></i>
-                                <span class="font-medium">My Trips</span>
+                            <a href="#" id="myTripsLink" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-route mr-2"></i>My Trips
                             </a>
-                            <div class="border-t border-gray-100 my-2"></div>
-                            <a href="#" id="logoutBtn" class="flex items-center px-4 py-3 text-red-600 hover:bg-red-50 transition-colors group">
-                                <i class="fas fa-sign-out-alt mr-3"></i>
-                                <span class="font-medium">Logout</span>
+                            <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600 hover:bg-gray-100">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
                             </a>
                         </div>
                     </div>
@@ -392,44 +157,40 @@
 
     <!-- Main Container -->
     <div id="app" class="min-h-screen">
-        
+
         <!-- Loading Screen -->
         <div id="loadingScreen" class="flex items-center justify-center min-h-screen">
             <div class="text-center">
-                <div class="loading-spinner mx-auto mb-6"></div>
-                <p class="text-gray-600 font-medium">Loading your journey...</p>
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-gray-600">Loading...</p>
             </div>
         </div>
 
         <!-- Login Page -->
-        <div id="loginPage" class="hidden min-h-screen flex items-center justify-center px-4 py-12">
-            <div class="max-w-md w-full">
-                <div class="text-center mb-10 animate-slide-up">
-                    <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-400 to-red-500 rounded-3xl mb-6 shadow-xl">
-                        <i class="fas fa-car text-white text-3xl"></i>
+        <div id="loginPage" class="hidden">
+            <div class="min-h-screen flex items-center justify-center px-4 gradient-bg">
+                <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
+                    <div class="text-center mb-8">
+                        <i class="fas fa-car text-blue-500 text-6xl mb-4"></i>
+                        <h1 class="text-3xl font-bold text-gray-800 mb-2">School Carpool</h1>
+                        <p class="text-gray-600">Safe, convenient rides for students</p>
                     </div>
-                    <h1 class="text-4xl heading-font font-bold text-gray-900 mb-3">School Carpool</h1>
-                    <p class="text-lg text-gray-600">Safe rides, happy memories</p>
-                </div>
-                
-                <div class="glass-card rounded-3xl p-8 animate-slide-up stagger-1">
-                    <h2 class="text-2xl heading-font font-bold text-gray-900 mb-2">Welcome!</h2>
-                    <p class="text-gray-600 mb-8">Sign in with your Google account to get started</p>
-                    
-                    <button onclick="handleGoogleLogin()" class="w-full bg-white border-2 border-gray-200 hover:border-orange-500 text-gray-700 font-semibold py-4 px-6 rounded-xl flex items-center justify-center space-x-3 transition-all hover:shadow-lg group">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                        </svg>
-                        <span class="group-hover:text-orange-500 transition-colors">Continue with Google</span>
-                    </button>
-                    
-                    <div class="mt-8 pt-6 border-t border-gray-200">
-                        <div class="flex items-start space-x-3 text-sm text-gray-600">
-                            <i class="fas fa-shield-alt text-orange-500 mt-0.5"></i>
-                            <p>Your data is protected with enterprise-grade security</p>
+
+                    <div class="space-y-4">
+                        <button id="googleSignInBtn" class="w-full bg-white border-2 border-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 transition flex items-center justify-center space-x-3">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                            </svg>
+                            <span>Sign in with Google</span>
+                        </button>
+
+                        <div class="mt-6 text-center text-sm text-gray-600">
+                            <p>✓ Secure & trusted</p>
+                            <p>✓ No passwords needed</p>
+                            <p>✓ Quick one-click login</p>
                         </div>
                     </div>
                 </div>
@@ -437,53 +198,65 @@
         </div>
 
         <!-- Profile Setup Page -->
-        <div id="profileSetupPage" class="hidden min-h-screen py-8 px-4">
-            <div class="max-w-2xl mx-auto">
-                <div class="text-center mb-8 animate-slide-up">
-                    <h1 class="text-3xl heading-font font-bold text-gray-900 mb-2">Complete Your Profile</h1>
-                    <p class="text-gray-600">Help us personalize your carpool experience</p>
-                </div>
-                
-                <div class="glass-card rounded-3xl p-6 sm:p-8 animate-slide-up stagger-1">
-                    <form id="profileForm" class="space-y-5">
+        <div id="profileSetupPage" class="hidden">
+            <div class="min-h-screen bg-gray-50 py-12 px-4">
+                <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Complete Your Profile</h2>
+
+                    <form id="profileForm" class="space-y-6">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
-                            <input type="text" id="nameInput" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all" placeholder="Enter your name">
+                            <input type="text" id="nameInput" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your full name">
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number *</label>
-                            <input type="tel" id="phoneInput" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all" placeholder="+60123456789">
+                            <input type="tel" id="phoneInput" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="+60 12-345 6789">
                         </div>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Gender *</label>
-                                <select id="genderInput" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all">
-                                    <option value="">Select gender</option>
-                                    <option value="Lelaki">Lelaki</option>
-                                    <option value="Perempuan">Perempuan</option>
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Area *</label>
-                                <input type="text" id="areaInput" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all" placeholder="e.g., Petaling Jaya">
-                            </div>
-                        </div>
-                        
+
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">I want to... *</label>
-                            <select id="roleInput" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all">
-                                <option value="">Select role</option>
-                                <option value="Driver">Offer rides (Driver)</option>
-                                <option value="Passenger">Join rides (Passenger)</option>
-                                <option value="Both">Both</option>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Gender *</label>
+                            <select id="genderInput" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Select gender</option>
+                                <option value="Lelaki">Lelaki (Male)</option>
+                                <option value="Perempuan">Perempuan (Female)</option>
                             </select>
                         </div>
-                        
-                        <button type="submit" class="w-full btn-primary py-4 rounded-xl text-lg font-semibold mt-8">
-                            Save Profile & Continue
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Area/Region *</label>
+                            <input type="text" id="areaInput" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., Petaling Jaya, Subang Jaya">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Role *</label>
+                            <select id="roleInput" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Select your role</option>
+                                <option value="Driver">Driver (I can drive students)</option>
+                                <option value="Passenger">Passenger (I need rides)</option>
+                                <option value="Both">Both (Driver & Passenger)</option>
+                            </select>
+                        </div>
+
+                        <div id="driverFields" class="hidden space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Available Seats</label>
+                                <input type="number" id="seatsInput" min="1" max="7" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., 3">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Car Model</label>
+                                <input type="text" id="carModelInput" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., Toyota Camry">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Car Plate Number</label>
+                                <input type="text" id="carPlateInput" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., ABC 1234">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full btn-primary text-white font-semibold py-3 px-6 rounded-lg">
+                            Complete Profile
                         </button>
                     </form>
                 </div>
@@ -491,191 +264,176 @@
         </div>
 
         <!-- Dashboard Page -->
-        <div id="dashboardPage" class="hidden pb-24">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                
+        <div id="dashboardPage" class="hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
                 <!-- Header -->
-                <div class="mb-8 animate-slide-up">
-                    <h1 class="text-3xl sm:text-4xl heading-font font-bold text-gray-900 mb-2">Discover Trips</h1>
-                    <p class="text-gray-600 text-lg">Find your perfect carpool match</p>
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">Available Trips</h1>
+                    <p class="text-gray-600">Find and join carpool rides in your area</p>
                 </div>
-                
-                <!-- Filters -->
-                <div class="glass-card rounded-2xl p-6 mb-8 animate-slide-up stagger-1">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="heading-font font-bold text-gray-900 flex items-center">
-                            <i class="fas fa-filter text-orange-500 mr-2"></i>
-                            Filters
-                        </h3>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+                <!-- Filter Bar -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Trip Type</label>
-                            <select id="filterType" class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl transition-all">
-                                <option value="">All Types</option>
+                            <select id="filterTripType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">All</option>
                                 <option value="morning">Morning</option>
                                 <option value="afternoon">Afternoon</option>
                                 <option value="both">Both</option>
                             </select>
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Gender</label>
-                            <select id="filterGender" class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl transition-all">
+                            <select id="filterGender" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                                 <option value="">All</option>
                                 <option value="Lelaki">Lelaki</option>
                                 <option value="Perempuan">Perempuan</option>
                                 <option value="Mixed">Mixed</option>
                             </select>
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Area</label>
-                            <input type="text" id="filterArea" class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl transition-all" placeholder="Search area...">
+                            <input type="text" id="filterArea" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Search area...">
+                        </div>
+
+                        <div class="flex items-end">
+                            <button id="applyFiltersBtn" class="w-full btn-primary text-white font-semibold py-2 px-6 rounded-lg">
+                                Apply Filters
+                            </button>
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Create Trip Button (Drivers Only) -->
+                <div id="createTripBtnContainer" class="hidden mb-6">
+                    <button id="createTripBtn" class="btn-secondary text-white font-semibold py-3 px-6 rounded-lg flex items-center">
+                        <i class="fas fa-plus mr-2"></i>
+                        Create New Trip
+                    </button>
+                </div>
+
                 <!-- Trips Grid -->
                 <div id="tripsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <!-- Trip cards will be inserted here -->
                 </div>
-                
+
                 <!-- Empty State -->
-                <div id="emptyState" class="hidden text-center py-16 animate-fade-in">
-                    <div class="empty-state-icon inline-block mb-6">
-                        <div class="w-24 h-24 bg-gradient-to-br from-orange-100 to-orange-200 rounded-full flex items-center justify-center">
-                            <i class="fas fa-car text-orange-500 text-4xl"></i>
-                        </div>
-                    </div>
-                    <h3 class="text-2xl heading-font font-bold text-gray-800 mb-2">No trips available</h3>
-                    <p class="text-gray-600 mb-6">Be the first to create a trip for your community!</p>
-                    <button onclick="document.getElementById('createTripBtn')?.click()" class="btn-primary py-3 px-8 rounded-xl inline-flex items-center">
-                        <i class="fas fa-plus mr-2"></i>
-                        Create Trip
-                    </button>
+                <div id="emptyState" class="hidden text-center py-12">
+                    <i class="fas fa-car text-gray-300 text-6xl mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-600 mb-2">No trips available</h3>
+                    <p class="text-gray-500">Check back later or create your own trip</p>
                 </div>
             </div>
         </div>
 
-        <!-- Floating Action Button (Drivers Only) -->
-        <div id="createTripBtnContainer" class="hidden">
-            <button id="createTripBtn" class="fab">
-                <i class="fas fa-plus"></i>
-            </button>
-        </div>
-
         <!-- Create Trip Modal -->
-        <div id="createTripModal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slide-up">
-                <div class="sticky top-0 bg-white border-b border-gray-100 px-6 sm:px-8 py-6 rounded-t-3xl z-10">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h2 class="text-2xl sm:text-3xl heading-font font-bold text-gray-900">Create New Trip</h2>
-                            <p class="text-gray-600 mt-1">Share your journey with others</p>
-                        </div>
-                        <button id="closeTripModal" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
-                            <i class="fas fa-times text-gray-600 text-xl"></i>
+        <div id="createTripModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Create New Trip</h2>
+                        <button id="closeTripModal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-2xl"></i>
                         </button>
                     </div>
-                </div>
-                
-                <form id="createTripForm" class="px-6 sm:px-8 py-6 space-y-5">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Trip Title *</label>
-                        <input type="text" id="tripTitle" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all" placeholder="e.g., Morning School Run">
-                    </div>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+                    <form id="createTripForm" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Start Point *</label>
-                            <input type="text" id="startPoint" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all" placeholder="e.g., SS2, PJ">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Trip Title *</label>
+                            <input type="text" id="tripTitle" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., Morning School Run">
                         </div>
-                        
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Destination *</label>
-                            <input type="text" id="destination" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all" placeholder="e.g., SK PJ">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Start Point *</label>
+                                <input type="text" id="startPoint" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., SS2, Petaling Jaya">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Destination *</label>
+                                <input type="text" id="destination" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., SK Petaling Jaya">
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
-                            <input type="date" id="tripDate" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
+                                <input type="date" id="tripDate" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Time *</label>
+                                <input type="time" id="tripTime" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
                         </div>
-                        
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Time *</label>
-                            <input type="time" id="tripTime" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all">
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Trip Type *</label>
-                            <select id="tripType" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all">
+                            <select id="tripType" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                                 <option value="morning">Morning</option>
                                 <option value="afternoon">Afternoon</option>
                                 <option value="both">Both</option>
                             </select>
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Gender Preference *</label>
-                            <select id="genderFilter" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all">
-                                <option value="Mixed">Mixed</option>
+                            <select id="genderFilter" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="Mixed">Mixed (All genders)</option>
                                 <option value="Lelaki">Lelaki only</option>
                                 <option value="Perempuan">Perempuan only</option>
                             </select>
                         </div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Max Passengers *</label>
-                        <input type="number" id="maxPassengers" required min="1" max="7" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all" placeholder="e.g., 3">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Notes (Optional)</label>
-                        <textarea id="tripNotes" rows="3" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl transition-all" placeholder="Any additional information..."></textarea>
-                    </div>
-                    
-                    <button type="submit" class="w-full btn-primary py-4 rounded-xl text-lg font-semibold mt-6">
-                        <i class="fas fa-check mr-2"></i>
-                        Create Trip
-                    </button>
-                </form>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Max Passengers *</label>
+                            <input type="number" id="maxPassengers" required min="1" max="7" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., 3">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Notes (Optional)</label>
+                            <textarea id="tripNotes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Any additional information..."></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full btn-primary text-white font-semibold py-3 px-6 rounded-lg">
+                            Create Trip
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 
         <!-- My Trips Page -->
-        <div id="myTripsPage" class="hidden pb-24">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                <div class="mb-8 animate-slide-up">
-                    <button id="backToDashboard" class="inline-flex items-center text-orange-500 hover:text-orange-600 mb-4 font-medium transition-colors">
-                        <i class="fas fa-arrow-left mr-2"></i>
-                        Back to Dashboard
+        <div id="myTripsPage" class="hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="mb-8">
+                    <button id="backToDashboard" class="text-blue-500 hover:text-blue-600 mb-4">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                     </button>
-                    <h1 class="text-3xl sm:text-4xl heading-font font-bold text-gray-900 mb-2">My Trips</h1>
-                    <p class="text-gray-600 text-lg">Manage your carpools</p>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">My Trips</h1>
                 </div>
-                
+
                 <!-- Tabs -->
-                <div class="mb-8 animate-slide-up stagger-1">
-                    <div class="glass-card rounded-2xl p-2 inline-flex">
-                        <button id="tabAsDriver" class="tab-btn px-6 py-3 rounded-xl font-semibold transition-all bg-orange-500 text-white">
-                            <i class="fas fa-steering-wheel mr-2"></i>As Driver
+                <div class="mb-6 border-b border-gray-200">
+                    <nav class="-mb-px flex space-x-8">
+                        <button id="tabAsDriver" class="tab-btn border-b-2 border-blue-500 py-4 px-1 text-blue-600 font-semibold">
+                            As Driver
                         </button>
-                        <button id="tabAsPassenger" class="tab-btn px-6 py-3 rounded-xl font-semibold transition-all text-gray-600 hover:text-gray-900">
-                            <i class="fas fa-user-friends mr-2"></i>As Passenger
+                        <button id="tabAsPassenger" class="tab-btn border-b-2 border-transparent py-4 px-1 text-gray-500 hover:text-gray-700">
+                            As Passenger
                         </button>
-                    </div>
+                    </nav>
                 </div>
-                
-                <div id="driverTripsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up stagger-2">
+
+                <div id="driverTripsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <!-- Driver trips will be inserted here -->
                 </div>
-                
+
                 <div id="passengerTripsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <!-- Passenger trips will be inserted here -->
                 </div>
@@ -685,14 +443,11 @@
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast" class="hidden fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 animate-slide-up">
-        <div class="flex items-center space-x-3">
-            <i class="fas fa-check-circle text-green-400"></i>
-            <p id="toastMessage" class="font-medium"></p>
-        </div>
+    <div id="toast" class="hidden fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+        <p id="toastMessage"></p>
     </div>
 
     <!-- Main Application Script -->
-    <script src="app.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
