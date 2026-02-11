@@ -413,6 +413,8 @@ async function editTrip(tripId) {
 async function joinTrip(tripId) {
     showLoading(true);
 
+    // We only need to insert. The SQL Triggers handle the 
+    // capacity check, gender check, and passenger increment.
     const { error } = await client
         .from('trip_members')
         .insert({
@@ -421,25 +423,12 @@ async function joinTrip(tripId) {
             status: 'confirmed'
         });
 
+    showLoading(false);
+
     if (error) {
-        showLoading(false);
-        showToast(error.message.includes('full') ? 'Trip is full!' : 'Error joining trip: ' + error.message, 'error');
+        // This will now catch "Trip is full" OR "Gender mismatch" from the DB
+        showToast(error.message, 'error');
     } else {
-        // Update passenger count
-        const { data: trip } = await client
-            .from('trips')
-            .select('current_passengers, max_passengers')
-            .eq('id', tripId)
-            .single();
-
-        if (trip) {
-            await client
-                .from('trips')
-                .update({ current_passengers: trip.current_passengers + 1 })
-                .eq('id', tripId);
-        }
-
-        showLoading(false);
         showToast('Joined trip successfully!', 'success');
         await loadDashboardData(currentUser.id);
     }
