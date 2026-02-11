@@ -117,8 +117,8 @@ function prefillProfileForm() {
 }
 
 async function signInWithGoogle() {
-    // Dynamic redirect for GitHub Pages vs Localhost
-    const redirectUrl = window.location.origin + window.location.pathname;
+    // This forces the redirect to go back to the subfolder explicitly
+    const redirectUrl = "https://arsenaltegar-jpg.github.io/school-carpool/";
     
     const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
