@@ -366,6 +366,7 @@ async function viewTripDetails(tripId) {
     // Render trip details
     const detailsContent = document.getElementById('trip-details-content');
     detailsContent.innerHTML = `
+        <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
         <div class="trip-detail-header">
             <h2>${escapeHtml(trip.title)}</h2>
             <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
@@ -438,18 +439,18 @@ async function viewTripDetails(tripId) {
 
         <div class="modal-actions" style="margin-top: 1.5rem;">
             ${!isDriver && !isMember && !isFull ? `
-                <button onclick="joinTrip('${tripId}')" class="btn-primary">Join Trip</button>
+                <button onclick="joinTrip('${tripId}')" class="btn-primary btn-full">Join Trip</button>
             ` : ''}
             ${!isDriver && isMember ? `
-                <button onclick="cancelTrip('${tripId}', '${userMembership.id}')" class="btn-danger">Cancel Trip</button>
+                <button onclick="cancelTrip('${tripId}', '${userMembership.id}')" class="btn-danger btn-full">Cancel Trip</button>
             ` : ''}
             ${isDriver ? `
-                <div style="display: flex; gap: 0.5rem;">
-                    <button onclick="editTrip('${tripId}')" class="btn-secondary" style="flex: 1;">Edit Trip</button>
-                    <button onclick="deleteTrip('${tripId}')" class="btn-danger" style="flex: 1;">Delete Trip</button>
+                <div class="button-group">
+                    <button onclick="editTrip('${tripId}')" class="btn-secondary">Edit Trip</button>
+                    <button onclick="deleteTrip('${tripId}')" class="btn-danger">Delete Trip</button>
                 </div>
             ` : ''}
-            <button onclick="closeModal()" class="btn-secondary">Close</button>
+            <button onclick="closeModal()" class="btn-secondary btn-full" style="margin-top: 0.5rem;">Close</button>
         </div>
     `;
 
@@ -663,9 +664,9 @@ async function openMyTrips() {
                 <p>👤 Driver: ${t.driver_name}</p>
                 <p>📍 ${t.start_point} → ${t.destination}</p>
                 <p>📅 ${new Date(t.trip_date).toLocaleDateString()} | ⏰ ${formatTime(t.trip_time)}</p>
-                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                    <button onclick="viewTripDetails('${t.id}')" class="btn-primary" style="flex: 1;">View Details</button>
-                    <button onclick="cancelTrip('${t.id}', '${membershipId}'); closeMyTrips();" class="btn-danger" style="flex: 1;">Cancel</button>
+                <div class="card-actions">
+                    <button onclick="viewTripDetails('${t.id}')" class="btn-primary">View Details</button>
+                    <button onclick="cancelTrip('${t.id}', '${membershipId}'); closeMyTrips();" class="btn-danger">Cancel</button>
                 </div>
             </div>
         `).join('');
@@ -688,9 +689,9 @@ async function openMyTrips() {
                 <p>📍 ${t.start_point} → ${t.destination}</p>
                 <p>📅 ${new Date(t.trip_date).toLocaleDateString()} | ⏰ ${formatTime(t.trip_time)}</p>
                 <p>💺 ${t.current_passengers || 0}/${t.max_passengers} seats filled</p>
-                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                    <button onclick="viewTripDetails('${t.id}')" class="btn-primary" style="flex: 1;">View Details</button>
-                    <button onclick="editTrip('${t.id}'); closeMyTrips();" class="btn-secondary" style="flex: 1;">Edit</button>
+                <div class="card-actions">
+                    <button onclick="viewTripDetails('${t.id}')" class="btn-primary">View Details</button>
+                    <button onclick="editTrip('${t.id}'); closeMyTrips();" class="btn-secondary">Edit</button>
                 </div>
             </div>
         `).join('');
