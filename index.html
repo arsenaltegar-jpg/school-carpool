@@ -4,13 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>School Carpool — Same School (Pulang Bermalam & Cuti)</title>
-  <!-- Tailwind via CDN (play) for quick prototype -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    /* Glassy modern card */
     .glass { background: rgba(255,255,255,0.06); backdrop-filter: blur(8px) saturate(120%); border: 1px solid rgba(255,255,255,0.08); }
-    .accent { color: rgba(99,102,241,1); }
     #map { height: 220px; border-radius: 0.5rem; }
   </style>
 </head>
@@ -25,7 +22,6 @@
     </header>
 
     <main class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Left column: Profile & Children -->
       <section class="md:col-span-1 glass p-4 rounded-lg">
         <h2 class="text-lg font-medium">Parent Profile</h2>
         <div id="profile-area" class="mt-3 space-y-2">
@@ -37,7 +33,6 @@
         <button id="btn-add-child" class="mt-3 w-full px-3 py-2 rounded-md glass hidden">Add Child</button>
       </section>
 
-      <!-- Middle: Trips list -->
       <section class="md:col-span-2 glass p-4 rounded-lg">
         <div class="flex items-start justify-between">
           <h2 class="text-lg font-medium">Available Trips (School-only)</h2>
@@ -51,7 +46,6 @@
             </select>
           </div>
         </div>
-
         <div id="trips-area" class="mt-4 space-y-3"></div>
       </section>
     </main>
@@ -59,7 +53,6 @@
     <footer class="mt-6 text-sm text-slate-400">Hosted: <a class="underline" href="https://arsenaltegar-jpg.github.io/school-carpool" target="_blank">Project GitHub Pages</a> • Uses Supabase Auth & Realtime</footer>
   </div>
 
-  <!-- Modals (hidden by default) -->
   <div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div class="bg-black/60 absolute inset-0" onclick="closeModal()"></div>
     <div class="relative w-full max-w-2xl p-6 glass rounded-lg z-10">
@@ -67,361 +60,164 @@
     </div>
   </div>
 
-  <!-- Dependencies -->
-  <script src="https://unpkg.com/@supabase/supabase-js/dist/umd/supabase.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-  <script>
-  // ---------------------------
-  // CONFIG (update if needed)
-  // ---------------------------
-  const SUPABASE_URL = 'https://zjxkykvkxfrndlcirfjg.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_MsYFfGjoGA-rl8PCjF-58Q_kGkMvzuF';
-  const SCHOOL_NAME = 'Sekolah Contoh — (fixed)'; // fixed school name for same-school deployment
+    const SUPABASE_URL = 'https://zjxkykvkxfrndlcirfjg.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_MsYFfGjoGA-rl8PCjF-58Q_kGkMvzuF';
+    const SCHOOL_NAME = 'Sekolah Contoh — (fixed)';
 
-  // Initialize Supabase
-  const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // ---------------------------
-  // UTIL
-  // ---------------------------
-  function el(html) { const tmp = document.createElement('div'); tmp.innerHTML = html.trim(); return tmp.firstChild; }
-  function openModal(html) { document.getElementById('modal-content').innerHTML = html; document.getElementById('modal').classList.remove('hidden'); document.getElementById('modal').classList.add('flex'); }
-  function closeModal(){ document.getElementById('modal').classList.remove('flex'); document.getElementById('modal').classList.add('hidden'); }
+    const btnSignin = document.getElementById('btn-signin');
+    const btnSignout = document.getElementById('btn-signout');
+    let currentUser = null;
 
-  // ---------------------------
-  // AUTH
-  // ---------------------------
-  const btnSignin = document.getElementById('btn-signin');
-  const btnSignout = document.getElementById('btn-signout');
-  let currentUser = null;
+    function el(html){ const t=document.createElement('div'); t.innerHTML=html.trim(); return t.firstChild; }
+    function openModal(html){ document.getElementById('modal-content').innerHTML=html; document.getElementById('modal').classList.remove('hidden'); document.getElementById('modal').classList.add('flex'); }
+    function closeModal(){ document.getElementById('modal').classList.remove('flex'); document.getElementById('modal').classList.add('hidden'); }
 
-  btnSignin.addEventListener('click', async ()=>{
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-  });
+    btnSignin.addEventListener('click', async ()=>{
+      await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+    });
 
-  btnSignout.addEventListener('click', async ()=>{
-    await supabase.auth.signOut(); location.reload();
-  });
+    btnSignout.addEventListener('click', async ()=>{
+      await supabase.auth.signOut(); location.reload();
+    });
 
-  // Handle auth state
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (session && session.user) {
-      currentUser = session.user;
-      afterSignIn(session.user);
-    } else {
-      currentUser = null; renderSignedOut();
-    }
-  });
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session && session.user) {
+        currentUser=session.user; afterSignIn(session.user);
+      } else { currentUser=null; renderSignedOut(); }
+    });
 
-  async function afterSignIn(user) {
-    // basic domain restriction example (client-side check)
-    const allowedDomain = null; // e.g. 'school.edu.my' or 'gmail.com' -> set if you want
-    if (allowedDomain) {
-      const email = user.email || '';
-      if (!email.endsWith('@' + allowedDomain)) {
-        alert('Please sign in with the approved school account (@' + allowedDomain + ').');
-        await supabase.auth.signOut();
-        return;
-      }
+    async function afterSignIn(user){
+      btnSignin.classList.add('hidden'); btnSignout.classList.remove('hidden');
+      const { data } = await supabase.from('parents').select('*').eq('google_uid', user.id).single().maybeSingle();
+      if(!data){
+        const profile = { google_uid:user.id, name:user.user_metadata.full_name||user.email.split('@')[0], email:user.email, phone:'', address:'', role:'parent'};
+        const insert = await supabase.from('parents').insert(profile).select().single();
+        openProfileForm(insert.data||profile,true);
+      } else { openProfileForm(data,false); }
+      document.getElementById('btn-add-child').classList.remove('hidden');
+      document.getElementById('btn-create-trip').classList.remove('hidden');
+      loadChildren(); loadTrips();
     }
 
-    btnSignin.classList.add('hidden'); btnSignout.classList.remove('hidden');
-    // check profile in "parents" table
-    const { data } = await supabase.from('parents').select('*').eq('google_uid', user.id).single().maybeSingle();
-    if (!data) {
-      // create minimal parent record (must complete profile)
-      const profile = { google_uid: user.id, name: user.user_metadata.full_name || user.email.split('@')[0], email: user.email, phone: '', address: '', location_lat: null, location_lng: null, role: 'parent' };
-      const insert = await supabase.from('parents').insert(profile).select().single();
-      // prompt complete profile
-      openProfileForm(insert.data || profile, true);
-    } else {
-      openProfileForm(data, false);
+    function renderSignedOut(){
+      document.getElementById('profile-area').innerHTML='<p class="text-sm text-slate-300">Please sign in with Google to access the carpool system.</p>';
+      btnSignin.classList.remove('hidden'); btnSignout.classList.add('hidden');
+      document.getElementById('btn-add-child').classList.add('hidden');
+      document.getElementById('btn-create-trip').classList.add('hidden');
+      document.getElementById('children-list').innerHTML='';
+      document.getElementById('trips-area').innerHTML='';
     }
 
-    // show main UI controls
-    document.getElementById('btn-add-child').classList.remove('hidden');
-    document.getElementById('btn-create-trip').classList.remove('hidden');
-    loadChildren(); loadTrips();
-  }
-
-  function renderSignedOut(){
-    document.getElementById('profile-area').innerHTML = `<p class="text-sm text-slate-300">Please sign in with Google to access the carpool system.</p>`;
-    btnSignin.classList.remove('hidden'); btnSignout.classList.add('hidden');
-    document.getElementById('btn-add-child').classList.add('hidden');
-    document.getElementById('btn-create-trip').classList.add('hidden');
-    document.getElementById('children-list').innerHTML = '';
-    document.getElementById('trips-area').innerHTML = '';
-  }
-
-  // ---------------------------
-  // PROFILE FORM
-  // ---------------------------
-  function openProfileForm(profile, isNew){
-    const html = `
-      <h3 class="text-lg font-medium">Complete Parent Profile</h3>
-      <div class="mt-3 space-y-2">
-        <label class="block text-sm">Full name</label>
-        <input id="pf-name" class="w-full p-2 rounded bg-slate-800" value="${profile.name || ''}" />
-        <label class="block text-sm">Phone (WhatsApp)</label>
-        <input id="pf-phone" class="w-full p-2 rounded bg-slate-800" value="${profile.phone || ''}" />
-        <label class="block text-sm">Address (optional)</label>
-        <input id="pf-address" class="w-full p-2 rounded bg-slate-800" value="${profile.address || ''}" />
-        <div class="flex gap-2">
-          <button id="pf-save" class="px-3 py-2 rounded glass">Save</button>
-          <button id="pf-close" class="px-3 py-2 rounded glass">Close</button>
-        </div>
-      </div>
-    `;
-    openModal(html);
-    document.getElementById('pf-close').addEventListener('click', closeModal);
-    document.getElementById('pf-save').addEventListener('click', async ()=>{
-      const name = document.getElementById('pf-name').value.trim();
-      const phone = document.getElementById('pf-phone').value.trim();
-      const address = document.getElementById('pf-address').value.trim();
-      const update = { name, phone, address };
-      await supabase.from('parents').update(update).eq('google_uid', currentUser.id);
-      closeModal();
-      loadChildren();
-    });
-  }
-
-  // ---------------------------
-  // CHILDREN
-  // ---------------------------
-  document.getElementById('btn-add-child').addEventListener('click', ()=>{
-    const html = `
-      <h3 class="text-lg font-medium">Add Child</h3>
-      <div class="mt-3 space-y-2">
-        <input id="ch-name" placeholder="Name" class="w-full p-2 rounded bg-slate-800" />
-        <select id="ch-gender" class="w-full p-2 rounded bg-slate-800"><option>Male</option><option>Female</option></select>
-        <input id="ch-level" placeholder="Tingkatan (e.g. 1)" class="w-full p-2 rounded bg-slate-800" />
-        <div class="flex gap-2"><button id="ch-save" class="px-3 py-2 rounded glass">Save</button><button id="ch-cancel" class="px-3 py-2 rounded glass">Cancel</button></div>
-      </div>
-    `;
-    openModal(html);
-    document.getElementById('ch-cancel').addEventListener('click', closeModal);
-    document.getElementById('ch-save').addEventListener('click', async ()=>{
-      const name = document.getElementById('ch-name').value.trim();
-      const gender = document.getElementById('ch-gender').value;
-      const level = document.getElementById('ch-level').value.trim();
-      // get parent id
-      const p = await supabase.from('parents').select('*').eq('google_uid', currentUser.id).single();
-      if (!p.data) { alert('Parent not found'); return; }
-      await supabase.from('children').insert({ parent_id: p.data.id, name, gender, form_level: level, school_name: SCHOOL_NAME });
-      closeModal(); loadChildren();
-    });
-  });
-
-  async function loadChildren(){
-    if (!currentUser) return;
-    const p = await supabase.from('parents').select('*').eq('google_uid', currentUser.id).single();
-    if (!p.data) return;
-    const children = await supabase.from('children').select('*').eq('parent_id', p.data.id);
-    const list = document.getElementById('children-list'); list.innerHTML = '';
-    (children.data || []).forEach(c => {
-      const node = el(`<div class="p-2 rounded border border-slate-700">${c.name} — ${c.gender} — T:${c.form_level}</div>`);
-      list.appendChild(node);
-    });
-  }
-
-  // ---------------------------
-  // TRIPS
-  // ---------------------------
-  document.getElementById('btn-create-trip').addEventListener('click', ()=>{
-    const html = `
-      <h3 class="text-lg font-medium">Create Trip (Driver)</h3>
-      <div class="mt-3 space-y-2">
-        <label>Trip Type</label>
-        <select id="t-type" class="w-full p-2 rounded bg-slate-800"><option>Pulang Bermalam</option><option>Cuti</option></select>
-        <label>Date</label>
-        <input id="t-date" type="date" class="w-full p-2 rounded bg-slate-800" />
-        <label>Time</label>
-        <input id="t-time" type="time" class="w-full p-2 rounded bg-slate-800" />
-        <label>Available seats</label>
-        <input id="t-seats" type="number" min="1" value="3" class="w-full p-2 rounded bg-slate-800" />
-        <label>Destination</label>
-        <input id="t-dest" class="w-full p-2 rounded bg-slate-800" placeholder="e.g. Home Town / Bandar" />
-        <label>Remarks</label>
-        <input id="t-remarks" class="w-full p-2 rounded bg-slate-800" placeholder="Optional" />
-        <div class="flex gap-2"><button id="t-save" class="px-3 py-2 rounded glass">Create</button><button id="t-cancel" class="px-3 py-2 rounded glass">Cancel</button></div>
-      </div>
-    `;
-    openModal(html);
-    document.getElementById('t-cancel').addEventListener('click', closeModal);
-    document.getElementById('t-save').addEventListener('click', async ()=>{
-      const type = document.getElementById('t-type').value;
-      const date = document.getElementById('t-date').value;
-      const time = document.getElementById('t-time').value;
-      const seats = parseInt(document.getElementById('t-seats').value)||1;
-      const dest = document.getElementById('t-dest').value.trim();
-      const remarks = document.getElementById('t-remarks').value.trim();
-      const p = await supabase.from('parents').select('*').eq('google_uid', currentUser.id).single();
-      if (!p.data) { alert('Parent not found'); return; }
-      await supabase.from('trips').insert({ driver_id: p.data.id, trip_type: type, origin: 'Sekolah', destination: dest, date, time, available_seats: seats, remarks, status: 'Active' });
-      closeModal(); loadTrips();
-    });
-  });
-
-  function tripCard(trip, driver){
-    const node = el(`
-      <div class="p-3 rounded border border-slate-700 grid md:grid-cols-3 gap-2">
-        <div>
-          <div class="font-semibold">${trip.trip_type} — ${trip.date} ${trip.time}</div>
-          <div class="text-sm text-slate-300">From: ${trip.origin} • To: ${trip.destination}</div>
-          <div class="text-xs mt-1 text-slate-400">${trip.remarks||''}</div>
-        </div>
-        <div class="text-center">
-          <div class="text-sm">Seats: <strong>${trip.available_seats}</strong></div>
-          <div class="text-sm mt-2">Driver: ${driver ? driver.name : '—'}</div>
-          <div class="text-sm">Contact: ${driver ? driver.phone || '—' : '—'}</div>
-        </div>
-        <div class="flex items-center justify-end gap-2">
-          <button class="btn-book px-3 py-1 rounded glass" data-id="${trip.id}">Book</button>
-          ${driver && driver.google_uid === (currentUser? currentUser.id : '') ? `<button class="btn-manage px-3 py-1 rounded glass" data-id="${trip.id}">Manage</button>` : ''}
-          <button class="btn-whatsapp px-3 py-1 rounded glass" data-phone="${driver ? driver.phone : ''}" data-name="${driver ? driver.name : ''}" data-trip="${trip.trip_type}" data-date="${trip.date}" data-child="">WhatsApp</button>
-        </div>
-      </div>
-    `);
-    // events
-    node.querySelector('.btn-whatsapp')?.addEventListener('click', (e)=>{
-      const btn = e.currentTarget; const phone = btn.dataset.phone; const driverName = btn.dataset.name; const tripType = btn.dataset.trip; const tripDate = btn.dataset.date; const childName = '';
-      if (!phone) return alert('Driver phone not provided');
-      const message = `Hi ${driverName}, I'm interested in your ${tripType} trip on ${tripDate}.`;
-      const url = `https://wa.me/${phone.replace(/[^0-9]/g,'')}?text=${encodeURIComponent(message)}`;
-      window.open(url, '_blank');
-    });
-
-    node.querySelector('.btn-book')?.addEventListener('click', async (e)=>{
-      if (!currentUser) return alert('Please sign in first');
-      const tripId = e.currentTarget.dataset.id;
-      // choose child
-      const p = await supabase.from('parents').select('*').eq('google_uid', currentUser.id).single();
-      const children = await supabase.from('children').select('*').eq('parent_id', p.data.id);
-      const childOptions = (children.data||[]).map(c=>`<option value="${c.id}">${c.name} (${c.form_level})</option>`).join('');
-      const html = `
-        <h3 class="text-lg">Select child to book</h3>
-        <div class="mt-3">
-          <select id="book-child" class="w-full p-2 rounded bg-slate-800">${childOptions}</select>
-          <div class="flex gap-2 mt-3"><button id="book-confirm" class="px-3 py-2 rounded glass">Confirm Booking</button><button id="book-cancel" class="px-3 py-2 rounded glass">Cancel</button></div>
-        </div>
-      `;
+    function openProfileForm(profile,isNew){
+      const html=`<h3 class='text-lg font-medium'>Complete Parent Profile</h3>
+      <div class='mt-3 space-y-2'>
+      <input id='pf-name' class='w-full p-2 rounded bg-slate-800' value='${profile.name||''}' placeholder='Full name'/>
+      <input id='pf-phone' class='w-full p-2 rounded bg-slate-800' value='${profile.phone||''}' placeholder='Phone (WhatsApp)'/>
+      <input id='pf-address' class='w-full p-2 rounded bg-slate-800' value='${profile.address||''}' placeholder='Address'/>
+      <div class='flex gap-2'><button id='pf-save' class='px-3 py-2 rounded glass'>Save</button><button id='pf-close' class='px-3 py-2 rounded glass'>Close</button></div></div>`;
       openModal(html);
-      document.getElementById('book-cancel').addEventListener('click', closeModal);
-      document.getElementById('book-confirm').addEventListener('click', async ()=>{
-        const childId = document.getElementById('book-child').value;
-        // check duplicate booking same date
-        const trip = await supabase.from('trips').select('*').eq('id', tripId).single();
-        if (!trip.data) return alert('Trip not found');
-        const sameDate = await supabase.from('trip_passengers').select('*,trips(*)').eq('child_id', childId).eq('status','Confirmed').maybeSingle();
-        // instead of maybeSingle use filtering by date
-        const existing = await supabase.rpc('check_child_trip_on_date', { _child_id: childId, _trip_date: trip.data.date }).catch(()=>({data: null}));
-        // if rpc not available, skip strict check (best effort)
-        // insert booking as Pending then update available seats when Confirmed by driver or auto-confirm
-        await supabase.from('trip_passengers').insert({ trip_id: tripId, child_id: childId, booked_by_parent_id: p.data.id, status: 'Confirmed' });
-        // decrement available seats
-        await supabase.from('trips').update({ available_seats: trip.data.available_seats - 1 }).eq('id', tripId);
-        closeModal(); loadTrips();
-        // open whatsapp to notify driver
-        const driver = await supabase.from('parents').select('*').eq('id', trip.data.driver_id).single();
-        const driverPhone = driver.data?.phone || '';
-        const driverName = driver.data?.name || 'Driver';
-        const child = (children.data||[]).find(c=>c.id===childId);
-        const message = `Hi ${driverName}, I'm interested in your ${trip.data.trip_type} trip on ${trip.data.date} for ${child.name}. Please confirm.`;
-        if (driverPhone) window.open(`https://wa.me/${driverPhone.replace(/[^0-9]/g,'')}?text=${encodeURIComponent(message)}`, '_blank');
-      });
-    });
-
-    return node;
-  }
-
-  async function loadTrips(){
-    const filter = document.getElementById('filter-trip-type').value;
-    let q = supabase.from('trips').select('*').eq('status','Active').order('date', { ascending: true });
-    if (filter) q = q.eq('trip_type', filter);
-    const res = await q;
-    const trips = res.data || [];
-    const area = document.getElementById('trips-area'); area.innerHTML = '';
-    for (const trip of trips) {
-      const driver = await supabase.from('parents').select('*').eq('id', trip.driver_id).single();
-      area.appendChild(tripCard(trip, driver.data));
+      document.getElementById('pf-close').onclick=closeModal;
+      document.getElementById('pf-save').onclick=async()=>{
+        const name=document.getElementById('pf-name').value.trim();
+        const phone=document.getElementById('pf-phone').value.trim();
+        const address=document.getElementById('pf-address').value.trim();
+        await supabase.from('parents').update({name,phone,address}).eq('google_uid',currentUser.id);
+        closeModal(); loadChildren();
+      };
     }
-  }
 
-  document.getElementById('filter-trip-type').addEventListener('change', loadTrips);
+    document.getElementById('btn-add-child').onclick=()=>{
+      const html=`<h3 class='text-lg font-medium'>Add Child</h3>
+      <div class='mt-3 space-y-2'><input id='ch-name' placeholder='Name' class='w-full p-2 rounded bg-slate-800'/>
+      <select id='ch-gender' class='w-full p-2 rounded bg-slate-800'><option>Male</option><option>Female</option></select>
+      <input id='ch-level' placeholder='Tingkatan (e.g. 1)' class='w-full p-2 rounded bg-slate-800'/>
+      <div class='flex gap-2'><button id='ch-save' class='px-3 py-2 rounded glass'>Save</button><button id='ch-cancel' class='px-3 py-2 rounded glass'>Cancel</button></div></div>`;
+      openModal(html);
+      document.getElementById('ch-cancel').onclick=closeModal;
+      document.getElementById('ch-save').onclick=async()=>{
+        const name=document.getElementById('ch-name').value.trim();
+        const gender=document.getElementById('ch-gender').value;
+        const level=document.getElementById('ch-level').value.trim();
+        const p=await supabase.from('parents').select('*').eq('google_uid',currentUser.id).single();
+        await supabase.from('children').insert({parent_id:p.data.id,name,gender,form_level:level,school_name:SCHOOL_NAME});
+        closeModal(); loadChildren();
+      };
+    };
 
-  // ---------------------------
-  // OPTIONAL: Realtime (basic)
-  // ---------------------------
-  // Subscribe to changes and refresh list
-  supabase.channel('public:trips').on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, (payload) => {
-    loadTrips();
-  }).subscribe();
+    async function loadChildren(){
+      if(!currentUser)return;
+      const p=await supabase.from('parents').select('*').eq('google_uid',currentUser.id).single();
+      const children=await supabase.from('children').select('*').eq('parent_id',p.data.id);
+      const list=document.getElementById('children-list'); list.innerHTML='';
+      (children.data||[]).forEach(c=>list.append(el(`<div class='p-2 rounded border border-slate-700'>${c.name} — ${c.gender} — T:${c.form_level}</div>`)));
+    }
 
-  // ---------------------------
-  // ON LOAD: check session
-  // ---------------------------
-  (async ()=>{
-    const session = supabase.auth.getSession().then(r=>{ if (r?.data?.session?.user) { currentUser = r.data.session.user; afterSignIn(r.data.session.user); } else renderSignedOut(); }).catch(()=>renderSignedOut());
-  })();
+    document.getElementById('btn-create-trip').onclick=()=>{
+      const html=`<h3 class='text-lg font-medium'>Create Trip (Driver)</h3>
+      <div class='mt-3 space-y-2'><select id='t-type' class='w-full p-2 rounded bg-slate-800'><option>Pulang Bermalam</option><option>Cuti</option></select>
+      <input id='t-date' type='date' class='w-full p-2 rounded bg-slate-800'/>
+      <input id='t-time' type='time' class='w-full p-2 rounded bg-slate-800'/>
+      <input id='t-seats' type='number' min='1' value='3' class='w-full p-2 rounded bg-slate-800'/>
+      <input id='t-dest' class='w-full p-2 rounded bg-slate-800' placeholder='Destination'/>
+      <input id='t-remarks' class='w-full p-2 rounded bg-slate-800' placeholder='Remarks'/>
+      <div class='flex gap-2'><button id='t-save' class='px-3 py-2 rounded glass'>Create</button><button id='t-cancel' class='px-3 py-2 rounded glass'>Cancel</button></div></div>`;
+      openModal(html);
+      document.getElementById('t-cancel').onclick=closeModal;
+      document.getElementById('t-save').onclick=async()=>{
+        const type=document.getElementById('t-type').value;
+        const date=document.getElementById('t-date').value;
+        const time=document.getElementById('t-time').value;
+        const seats=parseInt(document.getElementById('t-seats').value)||1;
+        const dest=document.getElementById('t-dest').value.trim();
+        const remarks=document.getElementById('t-remarks').value.trim();
+        const p=await supabase.from('parents').select('*').eq('google_uid',currentUser.id).single();
+        await supabase.from('trips').insert({driver_id:p.data.id,trip_type:type,origin:'Sekolah',destination:dest,date,time,available_seats:seats,remarks,status:'Active'});
+        closeModal(); loadTrips();
+      };
+    };
 
-  // ---------------------------
-  // NOTES & SQL (run on Supabase SQL editor to create tables)
-  // ---------------------------
-  //
-  // CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-  //
-  // create table parents (
-  //   id uuid primary key default gen_random_uuid(),
-  //   google_uid text unique,
-  //   name text,
-  //   email text,
-  //   phone text,
-  //   address text,
-  //   location_lat float,
-  //  location_lng float,
-  //   role text default 'parent'
-  // );
-  //
-  // create table children (
-  //   id uuid primary key default gen_random_uuid(),
-  //   parent_id uuid references parents(id) on delete cascade,
-  //   name text,
-  //   gender text,
-  //   form_level text,
-  //   school_name text
-  // );
-  //
-  // create table trips (
-  //   id uuid primary key default gen_random_uuid(),
-  //   driver_id uuid references parents(id) on delete set null,
-  //   trip_type text,
-  //   origin text,
-  //   origin_lat float,
-  //   origin_lng float,
-  //   destination text,
-  //   destination_lat float,
-  //   destination_lng float,
-  //   date date,
-  //   time time,
-  //   available_seats int,
-  //   remarks text,
-  //   status text default 'Active'
-  // );
-  //
-  // create table trip_passengers (
-  //   id uuid primary key default gen_random_uuid(),
-  //   trip_id uuid references trips(id) on delete cascade,
-  //   child_id uuid references children(id) on delete cascade,
-  //   booked_by_parent_id uuid references parents(id),
-  //   status text default 'Pending'
-  // );
-  //
-  // Optional RPC check function (example)
-  // create function check_child_trip_on_date(_child_id uuid, _trip_date date) returns boolean as $$
-  //   select exists(select 1 from trip_passengers tp join trips t on t.id=tp.trip_id where tp.child_id=_child_id and t.date=_trip_date and tp.status='Confirmed');
-  // $$ language sql stable;
+    async function loadTrips(){
+      const filter=document.getElementById('filter-trip-type').value;
+      let q=supabase.from('trips').select('*').eq('status','Active').order('date',{ascending:true});
+      if(filter)q=q.eq('trip_type',filter);
+      const res=await q;
+      const trips=res.data||[];
+      const area=document.getElementById('trips-area'); area.innerHTML='';
+      for(const trip of trips){
+        const driver=await supabase.from('parents').select('*').eq('id',trip.driver_id).single();
+        const node=el(`<div class='p-3 rounded border border-slate-700 grid md:grid-cols-3 gap-2'>
+          <div><div class='font-semibold'>${trip.trip_type} — ${trip.date} ${trip.time}</div><div class='text-sm text-slate-300'>To: ${trip.destination}</div></div>
+          <div class='text-center'><div>Seats: ${trip.available_seats}</div><div>Driver: ${driver.data?.name||''}</div><div>${driver.data?.phone||''}</div></div>
+          <div class='flex justify-end items-center gap-2'><button class='btn-book px-3 py-1 rounded glass' data-id='${trip.id}'>Book</button>
+          <button class='btn-whatsapp px-3 py-1 rounded glass' data-phone='${driver.data?.phone||''}' data-name='${driver.data?.name||''}' data-trip='${trip.trip_type}' data-date='${trip.date}'>WhatsApp</button></div></div>`);
 
-  </script>
-</body>
-</html>
+        node.querySelector('.btn-whatsapp').onclick=(e)=>{
+          const btn=e.currentTarget; const phone=btn.dataset.phone; const driverName=btn.dataset.name; const tripType=btn.dataset.trip; const tripDate=btn.dataset.date;
+          if(!phone)return alert('Driver phone not provided');
+          const msg=`Hi ${driverName}, I'm interested in your ${tripType} trip on ${tripDate}.`;
+          window.open(`https://wa.me/${phone.replace(/[^0-9]/g,'')}?text=${encodeURIComponent(msg)}`,'_blank');
+        };
+
+        node.querySelector('.btn-book').onclick=async(e)=>{
+          if(!currentUser)return alert('Sign in first');
+          const tripId=e.currentTarget.dataset.id;
+          const p=await supabase.from('parents').select('*').eq('google_uid',currentUser.id).single();
+          const children=await supabase.from('children').select('*').eq('parent_id',p.data.id);
+          const childOptions=(children.data||[]).map(c=>`<option value='${c.id}'>${c.name} (${c.form_level})</option>`).join('');
+          const html=`<h3 class='text-lg'>Select child</h3><select id='book-child' class='w-full p-2 rounded bg-slate-800 mt-3'>${childOptions}</select>
+          <div class='flex gap-2 mt-3'><button id='book-confirm' class='px-3 py-2 rounded glass'>Confirm</button><button id='book-cancel' class='px-3 py-2 rounded glass'>Cancel</button></div>`;
+          openModal(html);
+          document.getElementById('book-cancel').onclick=closeModal;
+          document.getElementById('book-confirm').onclick=async()=>{
+            const childId=document.getElementById('book-child').value;
+            const trip=await supabase.from('trips').select('*').eq('id',tripId).single();
+            await supabase.from('trip_passengers').insert({trip_id:tripId,child_id:childId,booked_by_parent_id:p.data.id,status:'Confirmed'});
+            await supabase.from('trips').update({available_seats:trip.data.available_seats-1}).eq('id',tripId);
+            closeModal(); loadTrips();
+            const driver=await supabase.from('parents').select
