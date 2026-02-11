@@ -16,7 +16,7 @@ async function init() {
 async function signIn() {
     await client.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin }
+        options: { redirectTo: "https://arsenaltegar-jpg.github.io/school-carpool" }
     });
 }
 
