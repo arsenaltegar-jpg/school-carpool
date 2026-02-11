@@ -26,7 +26,7 @@ async function signOut() {
 }
 
 async function checkProfile(user) {
-    const { data: profile } = await client.from('users').select('*').eq('id', user.id).single();[cite: 2, 7]
+    const { data: profile } = await client.from('users').select('*').eq('id', user.id).single();
     if (!profile) {
         showView('profile-modal');
     } else {
@@ -39,13 +39,13 @@ async function checkProfile(user) {
 // DATA LOADING
 async function loadDashboardData(userId) {
     // Load Available Trips using the View 
-    const { data: allTrips } = await client.from('trips_with_driver').select('*').eq('is_active', true);[cite: 13, 40]
+    const { data: allTrips } = await client.from('trips_with_driver').select('*').eq('is_active', true);
 
-    // Load User's Joined Trips [cite: 17, 41]
-    const { data: myRides } = await client.from('trip_members').select('trip_id').eq('user_id', userId).eq('status', 'confirmed');[cite: 18, 41]
+    // Load User's Joined Trips 
+    const { data: myRides } = await client.from('trip_members').select('trip_id').eq('user_id', userId).eq('status', 'confirmed');
 
-    // Load Trips where User is the Driver [cite: 8, 10]
-    const { data: myDriving } = await client.from('trips').select('id').eq('driver_id', userId).eq('is_active', true);[cite: 10]
+    // Load Trips where User is the Driver 
+    const { data: myDriving } = await client.from('trips').select('id').eq('driver_id', userId).eq('is_active', true);
 
     document.getElementById('stat-avail').innerText = allTrips?.length || 0;
     document.getElementById('stat-rides').innerText = myRides?.length || 0;
@@ -77,7 +77,6 @@ function renderTrips(trips, userId) {
 async function joinTrip(tripId) {
     const { data: { user } } = await client.auth.getUser();
     const { error } = await client.from('trip_members').insert({
-        [cite: 17, 21]
         trip_id: tripId,
         user_id: user.id,
         status: 'confirmed'
@@ -90,7 +89,7 @@ async function joinTrip(tripId) {
 async function deleteTrip(tripId, title) {
     if (!confirm(`Cancel trip: ${title}? Passengers will be notified.`)) return;
 
-    // Notify passengers before deactivating [cite: 24, 28]
+    // Notify passengers before deactivating 
     const { data: members } = await client.from('trip_members').select('user_id').eq('trip_id', tripId);
     if (members?.length > 0) {
         const notes = members.map(m => ({
@@ -100,10 +99,10 @@ async function deleteTrip(tripId, title) {
             message: `The trip "${title}" was cancelled by the driver.`,
             related_trip_id: tripId
         }));
-        await client.from('notifications').insert(notes);[cite: 24, 28]
+        await client.from('notifications').insert(notes);
     }
 
-    await client.from('trips').update({ is_active: false }).eq('id', tripId);[cite: 15]
+    await client.from('trips').update({ is_active: false }).eq('id', tripId);
     location.reload();
 }
 
