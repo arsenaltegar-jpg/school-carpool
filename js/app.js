@@ -1,14 +1,14 @@
 // ===================================
 // SCHOOL CARPOOL WEB APPLICATION
-// Main JavaScript File
+// Main JavaScript File - Fixed Version
 // ===================================
 
 // Configuration
-const SUPABASE_URL = 'https://zjxkykvkxfrndlcirfjg.supabase.co'; // Replace with your Supabase URL
-const SUPABASE_ANON_KEY = 'sb_publishable_MsYFfGjoGA-rl8PCjF-58Q_kGkMvzuF'; // Replace with your Supabase anon key
+const SUPABASE_URL = 'https://zjxkykvkxfrndlcirfjg.supabase.co'; 
+const SUPABASE_ANON_KEY = 'sb_publishable_MsYFfGjoGA-rl8PCjF-58Q_kGkMvzuF'; 
 
-let supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const supabase = supabaseClient;
+// Initialize Supabase client - Renamed to avoid conflict with the CDN global object
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Global state
 let currentUser = null;
@@ -33,11 +33,12 @@ function showToast(message, duration = 3000) {
 function showPage(pageId) {
     const pages = ['loginPage', 'profileSetupPage', 'dashboardPage', 'myTripsPage'];
     pages.forEach(page => {
-        document.getElementById(page).classList.add('hidden');
+        const el = document.getElementById(page);
+        if (el) el.classList.add('hidden');
     });
-    document.getElementById(pageId).classList.remove('hidden');
+    const targetPage = document.getElementById(pageId);
+    if (targetPage) targetPage.classList.remove('hidden');
     
-    // Show/hide navbar
     const navbar = document.getElementById('navbar');
     if (pageId === 'loginPage' || pageId === 'profileSetupPage') {
         navbar.classList.add('hidden');
@@ -70,8 +71,7 @@ function formatTime(timeString) {
 async function initializeAuth() {
     document.getElementById('loadingScreen').classList.remove('hidden');
     
-    // Check for existing session
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
     
     if (error) {
         console.error('Session error:', error);
@@ -91,14 +91,13 @@ async function initializeAuth() {
 }
 
 async function checkUserProfile() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('users')
         .select('*')
         .eq('id', currentUser.id)
         .single();
     
     if (error || !data) {
-        // User needs to complete profile
         showPage('profileSetupPage');
         prefillProfileForm();
     } else {
@@ -109,14 +108,12 @@ async function checkUserProfile() {
 }
 
 function prefillProfileForm() {
-    // Pre-fill with Google data
     if (currentUser.user_metadata) {
         const nameInput = document.getElementById('nameInput');
         if (currentUser.user_metadata.full_name) {
             nameInput.value = currentUser.user_metadata.full_name;
         }
         
-        // Set profile image
         if (currentUser.user_metadata.avatar_url) {
             document.getElementById('userAvatar').src = currentUser.user_metadata.avatar_url;
         }
@@ -124,10 +121,10 @@ function prefillProfileForm() {
 }
 
 async function signInWithGoogle() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: window.location.origin + '/auth/callback'
+            redirectTo: window.location.origin
         }
     });
     
@@ -138,7 +135,7 @@ async function signInWithGoogle() {
 }
 
 async function signOut() {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabaseClient.auth.signOut();
     if (error) {
         showToast('Sign out failed');
         console.error('Sign out error:', error);
@@ -155,7 +152,7 @@ async function signOut() {
 // ===================================
 
 async function saveUserProfile(profileData) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('users')
         .insert([{
             id: currentUser.id,
@@ -200,7 +197,7 @@ function isTripFull(trip) {
 // ===================================
 
 async function loadTrips(filters = {}) {
-    let query = supabase
+    let query = supabaseClient
         .from('trips')
         .select(`
             *,
@@ -211,7 +208,6 @@ async function loadTrips(filters = {}) {
         .gte('trip_date', new Date().toISOString().split('T')[0])
         .order('trip_date', { ascending: true });
     
-    // Apply filters
     if (filters.trip_type) {
         query = query.eq('trip_type', filters.trip_type);
     }
@@ -228,7 +224,6 @@ async function loadTrips(filters = {}) {
         return [];
     }
     
-    // Additional client-side filtering
     let filteredTrips = data || [];
     
     if (filters.area_filter) {
@@ -239,12 +234,10 @@ async function loadTrips(filters = {}) {
         );
     }
     
-    // Filter out trips user can't join due to gender
     filteredTrips = filteredTrips.filter(trip => 
         canJoinTrip(currentUserProfile.gender, trip.gender_filter)
     );
     
-    // Filter out user's own trips
     filteredTrips = filteredTrips.filter(trip => 
         trip.driver_id !== currentUser.id
     );
@@ -254,7 +247,7 @@ async function loadTrips(filters = {}) {
 }
 
 async function createTrip(tripData) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('trips')
         .insert([{
             ...tripData,
@@ -276,8 +269,7 @@ async function createTrip(tripData) {
 }
 
 async function joinTrip(tripId, pickupPoint = '') {
-    // Check if trip is full
-    const { data: trip } = await supabase
+    const { data: trip } = await supabaseClient
         .from('trips')
         .select('current_passengers, max_passengers')
         .eq('id', tripId)
@@ -288,8 +280,7 @@ async function joinTrip(tripId, pickupPoint = '') {
         return false;
     }
     
-    // Add user to trip
-    const { error: memberError } = await supabase
+    const { error: memberError } = await supabaseClient
         .from('trip_members')
         .insert([{
             trip_id: tripId,
@@ -299,7 +290,7 @@ async function joinTrip(tripId, pickupPoint = '') {
         }]);
     
     if (memberError) {
-        if (memberError.code === '23505') { // Unique violation
+        if (memberError.code === '23505') {
             showToast('You have already joined this trip');
         } else {
             console.error('Error joining trip:', memberError);
@@ -308,8 +299,7 @@ async function joinTrip(tripId, pickupPoint = '') {
         return false;
     }
     
-    // Update passenger count
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseClient
         .from('trips')
         .update({ current_passengers: trip.current_passengers + 1 })
         .eq('id', tripId);
@@ -318,7 +308,6 @@ async function joinTrip(tripId, pickupPoint = '') {
         console.error('Error updating passenger count:', updateError);
     }
     
-    // Create notification for driver
     await createNotification(
         tripId,
         'trip_joined',
@@ -330,7 +319,7 @@ async function joinTrip(tripId, pickupPoint = '') {
 }
 
 async function leaveTrip(tripId) {
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseClient
         .from('trip_members')
         .delete()
         .eq('trip_id', tripId)
@@ -342,20 +331,18 @@ async function leaveTrip(tripId) {
         return false;
     }
     
-    // Decrement passenger count
-    const { data: trip } = await supabase
+    const { data: trip } = await supabaseClient
         .from('trips')
         .select('current_passengers, driver_id')
         .eq('id', tripId)
         .single();
     
     if (trip && trip.current_passengers > 0) {
-        await supabase
+        await supabaseClient
             .from('trips')
             .update({ current_passengers: trip.current_passengers - 1 })
             .eq('id', tripId);
         
-        // Notify driver
         await createNotification(
             tripId,
             'trip_cancelled',
@@ -368,8 +355,7 @@ async function leaveTrip(tripId) {
 }
 
 async function deleteTrip(tripId) {
-    // Check if trip has passengers
-    const { data: members } = await supabase
+    const { data: members } = await supabaseClient
         .from('trip_members')
         .select('user_id')
         .eq('trip_id', tripId);
@@ -379,7 +365,7 @@ async function deleteTrip(tripId) {
         return false;
     }
     
-    const { error } = await supabase
+    const { error } = await supabaseClient
         .from('trips')
         .delete()
         .eq('id', tripId);
@@ -399,8 +385,7 @@ async function deleteTrip(tripId) {
 // ===================================
 
 async function createNotification(tripId, type, message) {
-    // Get trip driver
-    const { data: trip } = await supabase
+    const { data: trip } = await supabaseClient
         .from('trips')
         .select('driver_id, title')
         .eq('id', tripId)
@@ -408,7 +393,7 @@ async function createNotification(tripId, type, message) {
     
     if (!trip) return;
     
-    await supabase
+    await supabaseClient
         .from('notifications')
         .insert([{
             user_id: trip.driver_id,
@@ -420,7 +405,7 @@ async function createNotification(tripId, type, message) {
 }
 
 async function loadNotifications() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('notifications')
         .select('*')
         .eq('user_id', currentUser.id)
@@ -440,7 +425,7 @@ async function loadNotifications() {
 // ===================================
 
 function renderTripCard(trip) {
-    const isUserJoined = trip.trip_members.some(m => m.user_id === currentUser.id);
+    const isUserJoined = trip.trip_members && trip.trip_members.some(m => m.user_id === currentUser.id);
     const isFull = isTripFull(trip);
     const availableSeats = trip.max_passengers - trip.current_passengers;
     
@@ -453,7 +438,7 @@ function renderTripCard(trip) {
         <div class="trip-card bg-white rounded-xl shadow-md p-6 card-shadow">
             <div class="flex justify-between items-start mb-4">
                 <h3 class="text-lg font-bold text-gray-800">${trip.title}</h3>
-                ${isFull ? '<span class="badge badge-red">FULL</span>' : ''}
+                ${isFull ? '<span class="badge bg-red-100 text-red-700">FULL</span>' : ''}
             </div>
             
             <div class="space-y-3 mb-4">
@@ -476,20 +461,15 @@ function renderTripCard(trip) {
             </div>
             
             <div class="flex flex-wrap gap-2 mb-4">
-                <span class="badge ${genderBadgeClass}">
-                    ${trip.gender_filter}
-                </span>
-                <span class="badge ${tripTypeBadgeClass}">
-                    ${trip.trip_type.charAt(0).toUpperCase() + trip.trip_type.slice(1)}
-                </span>
+                <span class="badge ${genderBadgeClass}">${trip.gender_filter}</span>
+                <span class="badge ${tripTypeBadgeClass}">${trip.trip_type}</span>
                 <span class="badge badge-green">
-                    <i class="fas fa-users mr-1"></i>${availableSeats} seat${availableSeats !== 1 ? 's' : ''} left
+                    <i class="fas fa-users mr-1"></i>${availableSeats} left
                 </span>
             </div>
             
             <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
                 <img src="${trip.driver.profile_image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(trip.driver.name)}" 
-                     alt="Driver" 
                      class="w-10 h-10 rounded-full mr-3">
                 <div>
                     <p class="font-semibold text-gray-800">${trip.driver.name}</p>
@@ -498,78 +478,12 @@ function renderTripCard(trip) {
             </div>
             
             ${isUserJoined ? `
-                <button onclick="handleLeaveTrip('${trip.id}')" 
-                        class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition">
-                    Leave Trip
-                </button>
+                <button onclick="handleLeaveTrip('${trip.id}')" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg">Leave</button>
             ` : isFull ? `
-                <button disabled class="w-full bg-gray-300 text-gray-500 font-semibold py-2 px-4 rounded-lg cursor-not-allowed">
-                    Trip Full
-                </button>
+                <button disabled class="w-full bg-gray-300 text-gray-500 font-semibold py-2 px-4 rounded-lg">Full</button>
             ` : `
-                <button onclick="handleJoinTrip('${trip.id}')" 
-                        class="w-full btn-primary text-white font-semibold py-2 px-4 rounded-lg">
-                    Join Trip
-                </button>
+                <button onclick="handleJoinTrip('${trip.id}')" class="w-full btn-primary text-white font-semibold py-2 px-4 rounded-lg">Join</button>
             `}
-        </div>
-    `;
-}
-
-function renderDriverTripCard(trip) {
-    const passengerCount = trip.trip_members.filter(m => m.status === 'confirmed').length;
-    
-    return `
-        <div class="trip-card bg-white rounded-xl shadow-md p-6 card-shadow">
-            <div class="flex justify-between items-start mb-4">
-                <h3 class="text-lg font-bold text-gray-800">${trip.title}</h3>
-                <button onclick="handleDeleteTrip('${trip.id}')" 
-                        class="text-red-500 hover:text-red-600">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-            
-            <div class="space-y-3 mb-4">
-                <div class="flex items-center text-gray-600">
-                    <i class="fas fa-map-marker-alt text-blue-500 w-5"></i>
-                    <span class="text-sm ml-2">${trip.start_point}</span>
-                </div>
-                <div class="flex items-center text-gray-600">
-                    <i class="fas fa-flag-checkered text-green-500 w-5"></i>
-                    <span class="text-sm ml-2">${trip.destination}</span>
-                </div>
-                <div class="flex items-center text-gray-600">
-                    <i class="fas fa-calendar text-blue-500 w-5"></i>
-                    <span class="text-sm ml-2">${formatDate(trip.trip_date)}</span>
-                </div>
-                <div class="flex items-center text-gray-600">
-                    <i class="fas fa-clock text-blue-500 w-5"></i>
-                    <span class="text-sm ml-2">${formatTime(trip.trip_time)}</span>
-                </div>
-            </div>
-            
-            <div class="bg-blue-50 rounded-lg p-3 mb-4">
-                <p class="text-sm font-semibold text-gray-700">
-                    <i class="fas fa-users text-blue-500 mr-2"></i>
-                    ${passengerCount} / ${trip.max_passengers} passengers
-                </p>
-            </div>
-            
-            ${passengerCount > 0 ? `
-                <div class="mt-4">
-                    <p class="text-sm font-semibold text-gray-700 mb-2">Passengers:</p>
-                    <div class="space-y-2">
-                        ${trip.passenger_details.map(p => `
-                            <div class="flex items-center text-sm text-gray-600">
-                                <img src="${p.profile_image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" 
-                                     alt="${p.name}" 
-                                     class="w-6 h-6 rounded-full mr-2">
-                                <span>${p.name}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            ` : ''}
         </div>
     `;
 }
@@ -589,173 +503,56 @@ async function renderDashboard() {
 }
 
 async function renderMyTrips() {
-    // Load driver trips
-    const { data: driverTrips } = await supabase
+    const { data: driverTrips } = await supabaseClient
         .from('trips')
-        .select(`
-            *,
-            trip_members(
-                user_id,
-                status,
-                user:users(name, profile_image_url)
-            )
-        `)
+        .select(`*, trip_members(user_id, status, user:users(name, profile_image_url))`)
         .eq('driver_id', currentUser.id)
-        .eq('is_active', true)
-        .order('trip_date', { ascending: true });
+        .eq('is_active', true);
     
-    // Load passenger trips
-    const { data: passengerTrips } = await supabase
+    const { data: passengerTrips } = await supabaseClient
         .from('trip_members')
-        .select(`
-            *,
-            trip:trips(
-                *,
-                driver:users!trips_driver_id_fkey(name, phone, profile_image_url, car_model)
-            )
-        `)
-        .eq('user_id', currentUser.id)
-        .eq('status', 'confirmed');
-    
-    // Render driver trips
+        .select(`*, trip:trips(*, driver:users!trips_driver_id_fkey(name, profile_image_url, car_model))`)
+        .eq('user_id', currentUser.id);
+
     const driverContainer = document.getElementById('driverTripsContainer');
-    if (driverTrips && driverTrips.length > 0) {
-        // Add passenger details to trips
-        const tripsWithDetails = driverTrips.map(trip => ({
-            ...trip,
-            passenger_details: trip.trip_members
-                .filter(m => m.status === 'confirmed')
-                .map(m => m.user)
-        }));
-        
-        driverContainer.innerHTML = tripsWithDetails
-            .map(trip => renderDriverTripCard(trip))
-            .join('');
-    } else {
-        driverContainer.innerHTML = `
-            <div class="col-span-full text-center py-12">
-                <i class="fas fa-car text-gray-300 text-6xl mb-4"></i>
-                <p class="text-gray-500">No trips created yet</p>
-            </div>
-        `;
-    }
+    driverContainer.innerHTML = (driverTrips || []).map(trip => renderTripCard(trip)).join('');
     
-    // Render passenger trips
     const passengerContainer = document.getElementById('passengerTripsContainer');
-    if (passengerTrips && passengerTrips.length > 0) {
-        passengerContainer.innerHTML = passengerTrips
-            .map(member => renderTripCard(member.trip))
-            .join('');
-    } else {
-        passengerContainer.innerHTML = `
-            <div class="col-span-full text-center py-12">
-                <i class="fas fa-users text-gray-300 text-6xl mb-4"></i>
-                <p class="text-gray-500">No trips joined yet</p>
-            </div>
-        `;
-    }
+    passengerContainer.innerHTML = (passengerTrips || []).map(m => renderTripCard(m.trip)).join('');
 }
 
 // ===================================
-// INITIALIZATION
+// INITIALIZATION & EVENT LISTENERS
 // ===================================
 
 async function initializeDashboard() {
-    // Set user info in navbar
     const userAvatar = document.getElementById('userAvatar');
-    userAvatar.src = currentUserProfile.profile_image_url || 
-                     `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile.name)}`;
+    userAvatar.src = currentUserProfile.profile_image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserProfile.name)}`;
     
-    // Show create trip button for drivers
-    if (currentUserProfile.role === 'Driver' || currentUserProfile.role === 'Both') {
+    if (['Driver', 'Both'].includes(currentUserProfile.role)) {
         document.getElementById('createTripBtnContainer').classList.remove('hidden');
     }
-    
-    // Load initial trips
     await renderDashboard();
-    
-    // Load notifications
-    const notifications = await loadNotifications();
-    if (notifications.length > 0) {
-        document.getElementById('notificationBadge').classList.remove('hidden');
-        document.getElementById('notificationBadge').textContent = notifications.length;
-    }
 }
-
-// ===================================
-// EVENT HANDLERS
-// ===================================
-
-async function handleJoinTrip(tripId) {
-    const pickupPoint = prompt('Enter your pickup point (optional):');
-    const success = await joinTrip(tripId, pickupPoint || '');
-    if (success) {
-        await renderDashboard();
-    }
-}
-
-async function handleLeaveTrip(tripId) {
-    if (confirm('Are you sure you want to leave this trip?')) {
-        const success = await leaveTrip(tripId);
-        if (success) {
-            await renderDashboard();
-        }
-    }
-}
-
-async function handleDeleteTrip(tripId) {
-    if (confirm('Are you sure you want to delete this trip?')) {
-        const success = await deleteTrip(tripId);
-        if (success) {
-            await renderMyTrips();
-        }
-    }
-}
-
-// ===================================
-// EVENT LISTENERS
-// ===================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize auth on load
     initializeAuth();
     
-    // Listen for auth state changes
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabaseClient.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN') {
             currentUser = session.user;
             checkUserProfile();
         } else if (event === 'SIGNED_OUT') {
-            currentUser = null;
-            currentUserProfile = null;
             showPage('loginPage');
         }
     });
-    
-    // Google Sign In
+
     document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
-    
-    // Logout
     document.getElementById('logoutBtn').addEventListener('click', signOut);
+    document.getElementById('userMenuBtn').addEventListener('click', () => document.getElementById('userDropdown').classList.toggle('hidden'));
     
-    // User menu dropdown
-    document.getElementById('userMenuBtn').addEventListener('click', () => {
-        document.getElementById('userDropdown').classList.toggle('hidden');
-    });
-    
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        const userMenu = document.getElementById('userMenuBtn');
-        const dropdown = document.getElementById('userDropdown');
-        if (!userMenu.contains(e.target) && !dropdown.contains(e.target)) {
-            dropdown.classList.add('hidden');
-        }
-    });
-    
-    // Profile Form
     document.getElementById('profileForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const profileData = {
             name: document.getElementById('nameInput').value,
             phone: document.getElementById('phoneInput').value,
@@ -763,53 +560,18 @@ document.addEventListener('DOMContentLoaded', () => {
             area: document.getElementById('areaInput').value,
             role: document.getElementById('roleInput').value
         };
-        
-        // Add driver-specific fields if role is Driver or Both
-        const role = document.getElementById('roleInput').value;
-        if (role === 'Driver' || role === 'Both') {
-            profileData.seats_available = parseInt(document.getElementById('seatsInput').value);
-            profileData.car_model = document.getElementById('carModelInput').value;
-            profileData.car_plate = document.getElementById('carPlateInput').value;
-        }
-        
-        const success = await saveUserProfile(profileData);
-        if (success) {
-            showToast('Profile saved successfully!');
-            initializeDashboard();
+        if (await saveUserProfile(profileData)) {
             showPage('dashboardPage');
+            initializeDashboard();
         }
     });
-    
-    // Show/hide driver fields based on role
-    document.getElementById('roleInput').addEventListener('change', (e) => {
-        const driverFields = document.getElementById('driverFields');
-        if (e.target.value === 'Driver' || e.target.value === 'Both') {
-            driverFields.classList.remove('hidden');
-            document.getElementById('seatsInput').required = true;
-        } else {
-            driverFields.classList.add('hidden');
-            document.getElementById('seatsInput').required = false;
-        }
-    });
-    
-    // Create Trip Button
+
     document.getElementById('createTripBtn').addEventListener('click', () => {
         document.getElementById('createTripModal').classList.remove('hidden');
-        // Set minimum date to today
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('tripDate').setAttribute('min', today);
     });
-    
-    // Close Trip Modal
-    document.getElementById('closeTripModal').addEventListener('click', () => {
-        document.getElementById('createTripModal').classList.add('hidden');
-        document.getElementById('createTripForm').reset();
-    });
-    
-    // Create Trip Form
+
     document.getElementById('createTripForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const tripData = {
             title: document.getElementById('tripTitle').value,
             start_point: document.getElementById('startPoint').value,
@@ -818,76 +580,14 @@ document.addEventListener('DOMContentLoaded', () => {
             trip_time: document.getElementById('tripTime').value,
             trip_type: document.getElementById('tripType').value,
             gender_filter: document.getElementById('genderFilter').value,
-            max_passengers: parseInt(document.getElementById('maxPassengers').value),
-            notes: document.getElementById('tripNotes').value || null
+            max_passengers: parseInt(document.getElementById('maxPassengers').value)
         };
-        
-        const trip = await createTrip(tripData);
-        if (trip) {
+        if (await createTrip(tripData)) {
             document.getElementById('createTripModal').classList.add('hidden');
-            document.getElementById('createTripForm').reset();
-            await renderDashboard();
+            renderDashboard();
         }
-    });
-    
-    // Apply Filters
-    document.getElementById('applyFiltersBtn').addEventListener('click', async () => {
-        const filters = {
-            trip_type: document.getElementById('filterTripType').value,
-            gender_filter: document.getElementById('filterGender').value,
-            area_filter: document.getElementById('filterArea').value
-        };
-        
-        const trips = await loadTrips(filters);
-        const container = document.getElementById('tripsContainer');
-        const emptyState = document.getElementById('emptyState');
-        
-        if (trips.length === 0) {
-            container.innerHTML = '';
-            emptyState.classList.remove('hidden');
-        } else {
-            emptyState.classList.add('hidden');
-            container.innerHTML = trips.map(trip => renderTripCard(trip)).join('');
-        }
-    });
-    
-    // My Trips Link
-    document.getElementById('myTripsLink').addEventListener('click', (e) => {
-        e.preventDefault();
-        showPage('myTripsPage');
-        renderMyTrips();
-        document.getElementById('userDropdown').classList.add('hidden');
-    });
-    
-    // Back to Dashboard
-    document.getElementById('backToDashboard').addEventListener('click', () => {
-        showPage('dashboardPage');
-        renderDashboard();
-    });
-    
-    // My Trips Tabs
-    document.getElementById('tabAsDriver').addEventListener('click', () => {
-        document.getElementById('tabAsDriver').classList.add('border-blue-500', 'text-blue-600', 'font-semibold');
-        document.getElementById('tabAsDriver').classList.remove('border-transparent', 'text-gray-500');
-        document.getElementById('tabAsPassenger').classList.remove('border-blue-500', 'text-blue-600', 'font-semibold');
-        document.getElementById('tabAsPassenger').classList.add('border-transparent', 'text-gray-500');
-        
-        document.getElementById('driverTripsContainer').classList.remove('hidden');
-        document.getElementById('passengerTripsContainer').classList.add('hidden');
-    });
-    
-    document.getElementById('tabAsPassenger').addEventListener('click', () => {
-        document.getElementById('tabAsPassenger').classList.add('border-blue-500', 'text-blue-600', 'font-semibold');
-        document.getElementById('tabAsPassenger').classList.remove('border-transparent', 'text-gray-500');
-        document.getElementById('tabAsDriver').classList.remove('border-blue-500', 'text-blue-600', 'font-semibold');
-        document.getElementById('tabAsDriver').classList.add('border-transparent', 'text-gray-500');
-        
-        document.getElementById('passengerTripsContainer').classList.remove('hidden');
-        document.getElementById('driverTripsContainer').classList.add('hidden');
     });
 });
 
-// Make functions globally accessible for onclick handlers
-window.handleJoinTrip = handleJoinTrip;
-window.handleLeaveTrip = handleLeaveTrip;
-window.handleDeleteTrip = handleDeleteTrip;
+window.handleJoinTrip = joinTrip;
+window.handleLeaveTrip = leaveTrip;
