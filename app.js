@@ -498,6 +498,11 @@ async function cancelTrip(tripId, membershipId) {
         showLoading(false);
     } else {
         showToast('Trip canceled successfully', 'success');
+
+        // Wait a moment for database trigger to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Reload dashboard data to get updated passenger counts
         await loadDashboardData(currentUser.id);
 
         // Check if My Trips modal is currently open
