@@ -494,13 +494,23 @@ async function cancelTrip(tripId, membershipId) {
 
     if (error) {
         showToast('Error canceling trip: ' + error.message, 'error');
+        showLoading(false);
     } else {
         showToast('Trip canceled successfully', 'success');
         await loadDashboardData(currentUser.id);
-        closeModal();
-    }
 
-    showLoading(false);
+        // Check if My Trips modal is currently open
+        const myTripsModal = document.getElementById('my-trips-modal');
+        if (myTripsModal && !myTripsModal.classList.contains('hidden')) {
+            // Refresh the My Trips page
+            await openMyTrips();
+        } else {
+            // Close the trip details modal if it was open
+            closeModal();
+        }
+
+        showLoading(false);
+    }
 }
 
 // TRIP CREATION & EDITING
@@ -646,14 +656,17 @@ async function openMyTrips() {
             </div>
         `;
     } else {
-        joinedList.innerHTML = joined.map(({ trips_with_driver: t }) => `
+        joinedList.innerHTML = joined.map(({ id: membershipId, trips_with_driver: t }) => `
             <div class="card" style="margin-bottom: 1rem;">
                 <span class="badge badge-${t.trip_type}">${t.trip_type}</span>
                 <h3>${t.title}</h3>
                 <p>👤 Driver: ${t.driver_name}</p>
                 <p>📍 ${t.start_point} → ${t.destination}</p>
                 <p>📅 ${new Date(t.trip_date).toLocaleDateString()} | ⏰ ${formatTime(t.trip_time)}</p>
-                <button onclick="viewTripDetails('${t.id}')" class="btn-primary" style="margin-top: 1rem; width: 100%;">View Details</button>
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                    <button onclick="viewTripDetails('${t.id}')" class="btn-primary" style="flex: 1;">View Details</button>
+                    <button onclick="cancelTrip('${t.id}', '${membershipId}'); closeMyTrips();" class="btn-danger" style="flex: 1;">Cancel</button>
+                </div>
             </div>
         `).join('');
     }
