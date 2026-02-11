@@ -117,7 +117,7 @@ function prefillProfileForm() {
 }
 
 async function signInWithGoogle() {
-    // This forces the redirect to go back to the subfolder explicitly
+    // This MUST match the 'redirect_to' in your error and the whitelist in Supabase
     const redirectUrl = "https://arsenaltegar-jpg.github.io/school-carpool/";
     
     const { error } = await supabaseClient.auth.signInWithOAuth({
