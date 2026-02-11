@@ -7,8 +7,8 @@
 const SUPABASE_URL = 'https://zjxkykvkxfrndlcirfjg.supabase.co'; // Replace with your Supabase URL
 const SUPABASE_ANON_KEY = 'sb_publishable_MsYFfGjoGA-rl8PCjF-58Q_kGkMvzuF'; // Replace with your Supabase anon key
 
-// Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = supabaseClient;
 
 // Global state
 let currentUser = null;
